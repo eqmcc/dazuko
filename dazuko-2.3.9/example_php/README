@@ -1,0 +1,19 @@
+
+A PHP binding for Dazuko was made by Oliver Welter and can be downloaded
+from http://pecl.php.net/package/dazuko.  It is available under the PHP
+license (see http://www.php.net/license/3_0.txt).  The basic steps to
+install and test it are:
+
+  $ gunzip < dazuko-0.42.tgz | tar xf -
+  $ pear build
+  # cp dazuko-0.42/dazuko.so /usr/lib/php/extensions/... (or "pear install"?)
+  [ add "extension = dazuko.so" to the "[PHP]" section of php.ini ]
+  # php -q dazuko-0.42/examples/dazuko_multi_threaded.php
+  [ access any files under the /etc hierarchy ]
+
+The extension does not know about the example_php/../dazukoio.h and
+example_php/../library layout and instead expects to find these
+components in /usr/include (or /usr/local/include) and /usr/local/lib,
+respectively.  Make sure to have the files available there or use the
+appropriate --with-dazuko config option.
+

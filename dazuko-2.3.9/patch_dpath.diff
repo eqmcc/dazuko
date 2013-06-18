@@ -1,0 +1,16 @@
+--- fs/dcache.c	Wed Jan 19 20:49:43 2005
++++ fs/dcache.c.patched	Wed Jan 19 20:50:16 2005
+@@ -1277,7 +1277,7 @@
+  *
+  * "buflen" should be positive. Caller holds the dcache_lock.
+  */
+-static char * __d_path( struct dentry *dentry, struct vfsmount *vfsmnt,
++char * __d_path( struct dentry *dentry, struct vfsmount *vfsmnt,
+ 			struct dentry *root, struct vfsmount *rootmnt,
+ 			char *buffer, int buflen)
+ {
+@@ -1660,3 +1660,4 @@
+ EXPORT_SYMBOL(shrink_dcache_anon);
+ EXPORT_SYMBOL(shrink_dcache_parent);
+ EXPORT_SYMBOL(shrink_dcache_sb);
++EXPORT_SYMBOL(__d_path);

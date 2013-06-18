@@ -1,0 +1,68 @@
+This directory contains the source code for the Dazuko driver.
+Example programs to demonstrate the driver in C and Java are
+available in the example_c and example_java sub-directories,
+respectively.
+
+Dazuko is free software.  See the file COPYING for copying
+permission.
+
+Please refer to http://www.dazuko.org for detailed information on
+compiling and installing Dazuko.
+
+
+
+Here are some very QUICK and DIRTY instructions for the impatient.
+Please refer to the website if you have problems.
+
+NOTE: If you are running a Linux kernel >= 2.6.23, please read
+      README.redirfs
+
+
+===========
+ Compiling
+===========
+Configure the Makefile
+  ./configure
+
+Build the kernel module
+  make
+
+Build the C example program
+  cd example_c
+  make
+
+
+==============
+ Insert Linux
+==============
+Insert the kernel module
+  /sbin/insmod ./dazuko.o   <-- Linux 2.2-2.4
+  /sbin/insmod ./dazuko.ko  <-- Linux 2.6
+
+Create the /dev/dazuko node (if it doesn't already exist)
+  mknod -m 600 /dev/dazuko c `grep dazuko /proc/devices | sed "s/ .*//"` 0
+
+
+================
+ Insert FreeBSD
+================
+Insert the kernel module
+  /sbin/kldload ./dazuko.ko
+
+Create the /dev/dazuko node
+  mknod /dev/dazuko c 33 0
+
+
+==============
+ Remove Linux
+==============
+Remove the kernel module
+  /sbin/rmmod dazuko
+
+
+================
+ Remove FreeBSD
+================
+Remove the kernel module
+  /sbin/kldunload dazuko
+

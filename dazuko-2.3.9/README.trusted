@@ -1,0 +1,121 @@
+5 June 2005
+
+This file describes the new Trusted Application Framework (TAF) API.
+
+
+=============
+ TAF CONCEPT
+=============
+
+The trusted application framework was designed to "fit" to the current event
+model of Dazuko. When an application wants to be trusted, it sends a request
+to Dazuko. In the request is the name of the group that will be responsible
+for the trustworthiness of the application and a token, that is used so the
+registered application can recognize the requesting application.
+
+If a registered application accepts a trust request, the trusted application
+may open/close files without generating Dazuko events. For this reason it is
+important that an application supporting trusted applications take the token
+seriously. Trusted access should only be granted to recognized and
+trustworthy applications.
+
+A trusted application can unregister itself when it is finished. This is
+recommended. It is also possible that a registered application remove the
+trusted privilege from all applications that have it.
+
+
+=========
+ TAF API (non-registered process)
+=========
+
+An include file "dazukoio_trusted.h" is available for applications that want
+to be trusted by Dazuko. There are only two functions available here:
+
+int dazukoRegisterTrusted(const char *groupName, const char *token, int flags);
+int dazukoUnregisterTrusted(void);
+
+The goal of the application is to request trusted access from a registered
+Dazuko group. This is why the group name must be provided. The token
+argument can be any null-terminated string. This string should be something
+generated (preferably random) by the registered group and sent to this
+application. The token will be sent back to the group through Dazuko during
+registration, which will allow the group to recognize that the process is
+really the process expected. A 256 character random hexadecimal string
+should be sufficient. But make sure that the tokens are not static strings
+in the binaries (where another process could find out what the string is).
+
+If the register function returns 0, then the application knows that it has
+been granted trusted access. If a non-zero value is returned, than either
+access was denied or there was an error (for example, a problem
+communicating with Dazuko). Later there will be defines for various errors.
+If a non-zero value is returned, make sure the application has rights
+to write to /dev/dazuko.
+
+There is currently only one flag that may be given during registration:
+DAZUKO_TRUST_CHILDREN. If this flag is given instead of 0, then the
+process is requesting that any children processes also be trusted. This
+includes child threads and child processes.
+
+When the application is finished being trusted, it can give up its trusted
+privilege using the unregister function. This is recommended because it
+results in Dazuko removing the process from the trusted list, thus
+reducing the risk that another process could gain unauthorized trusted
+access.
+
+
+=========
+ TAF API (registered process)
+=========
+
+A new event type has been defined for TAF. The event is called
+DAZUKO_TRUST_REQUEST. If you want your applications to be able to
+authorize trust requests, then this event must be added to the access
+mask.
+
+dazukoSetAccessMask(... | DAZUKO_TRUST_REQUEST);
+
+When another application requests trusted access, this request comes to
+your registered application in the form of an event. The event is, of
+course, DAZUKO_TRUST_REQUEST and several of the values in the
+dazuko_access structure will be set (for example, pid). An important
+value that is set is filename. filename is the token, which was sent from
+the application requesting trusted access.
+
+It is the registered application's responsibility to make sure that the
+other application can be trusted. The filename (token) should be taken
+very seriously. As mentioned before, it would be best if your registered
+application could randomly generate a token that is passed on to the
+application for requesting trusted access. If you see a token that you do
+not recognize, do NOT allow the request.
+
+Requests can be allowed by setting the deny flag in dazuko_access to 0. A
+non-zero value is interpreted as deny. For DAZUKO_TRUST_REQUEST events,
+the deny flag is set to 1 by default.
+
+You should also take note of the "flags" field. It is possible that the
+DAZUKO_TRUST_CHILDREN flag is set. This means that the process is
+requesting that all children processes are also trusted. See the
+explanation above for details about what this means.
+
+After your application returns the dazuko_access, it can be assumed that
+the other application is now trusted. Your application can clear the
+trusted list at any time, thus making all non-registered processes
+untrusted, by using the dazukoRemoveAllTrusted() function. If your
+application knows that no other applications should be trusted, it may
+want to call this function to be sure that the list is clear. It is also
+possible to clear specific trusted processes based on their tokens using
+the dazukoRemoveTrusted() function.
+
+Be aware that the DAZUKO_TRUST_REQUEST comes as any other event. This
+means that if you have multiple processes in your group, all of them
+must be prepared to authorize trusted request (because the event could
+come to any process in the group).
+
+
+====================
+ PROBLEMS/QUESTIONS
+====================
+
+If you have any problems or questions about the new TAF API, please don't
+hesitate to post to dazuko-devel@nongnu.org
+

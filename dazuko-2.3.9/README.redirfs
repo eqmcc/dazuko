@@ -1,0 +1,28 @@
+In order to support more recent Linux kernels, Dazuko makes use of the
+Redirfs module. The Redirfs project can be found at: www.redirfs.org
+
+Here are quick instructions for installing both Redirfs and Dazuko. It
+is assumed that the latest Redirfs and Dazuko source packages have already
+been downloaded.
+
+(unpack and build Redirfs)
+$ tar xzf redirfs-0.8.tar.gz
+$ cd redirfs-0.8
+$ make -C /lib/modules/`uname -r`/build M=`pwd` modules
+
+(install the Redirfs kernel module)
+$ sudo cp redirfs.ko /lib/modules/`uname -r`/kernel/fs/
+$ sudo depmod -a
+
+(unpack and build Dazuko)
+$ cd ..
+$ tar xzf dazuko-2.3.8.tar.gz
+$ cd dazuko-2.3.8
+$ ./configure --redirfsdir=`pwd`/../redirfs-0.8
+$ make
+$ sudo make install
+
+(load Dazuko)
+$ sudo modprobe dazuko
+
+(Redirfs will automatically load)

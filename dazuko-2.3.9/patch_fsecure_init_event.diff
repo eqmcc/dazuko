@@ -1,0 +1,279 @@
+This patch adds support for the "init module" event, important for use
+with F-Secure software. It can be applied with:
+
+$ patch -p0 < patch_fsecure_init_event.diff
+
+
+Index: configure
+===================================================================
+RCS file: /cvsroot/dazuko/dazuko/configure,v
+retrieving revision 1.121
+diff -u -p -r1.121 configure
+--- configure	17 Mar 2009 20:37:12 -0000	1.121
++++ configure	17 Mar 2009 20:47:07 -0000
+@@ -68,6 +68,7 @@ print_help()
+ 	echo "  --enable-event-unlink           capture ON_UNLINK events"
+ 	echo "  --enable-event-rmdir            capture ON_RMDIR events"
+ 	echo "  --enable-event-close-modified   capture ON_CLOSE_MODIFIED events"
++	echo "  --enable-event-init-module      capture ON_INIT_MODULE events (Linux only)"
+ 	echo "  --disable-trusted               disable support for trusted applications"
+ 	echo "  --disable-stacking              disable LSM stacking (Linux 2.6 only)"
+ 	echo "  --disable-rsbac                 disable RSBAC support (Linux only)"
+@@ -873,6 +874,11 @@ do_linux26()
+ 		echo "EXTRA_CFLAGS += -DON_RMDIR_SUPPORT" >> Makefile
+ 	fi
+ 
++	if [ ${ON_INIT_MODULE} -eq 1 ]
++	then
++		echo "EXTRA_CFLAGS += -DON_INIT_MODULE_SUPPORT" >> Makefile
++	fi
++
+ 	if [ ${TRUSTED} -eq 1 ]
+ 	then
+ 		echo "EXTRA_CFLAGS += -DTRUSTED_APPLICATION_SUPPORT" >> Makefile
+@@ -1060,6 +1066,11 @@ do_linux()
+ 		echo "KFLAGS += -DON_RMDIR_SUPPORT" >> Makefile
+ 	fi
+ 
++	if [ ${ON_INIT_MODULE} -eq 1 ]
++	then
++		echo "KFLAGS += -DON_INIT_MODULE_SUPPORT" >> Makefile
++	fi
++
+ 	if [ ${ON_CLOSE_MODIFIED} -eq 1 ]
+ 	then
+ 		echo "KFLAGS += -DON_CLOSE_MODIFIED_SUPPORT" >> Makefile
+@@ -1400,6 +1411,11 @@ do_summary()
+ 			echo -n " ON_RMDIR"
+ 		fi
+ 
++		if [ ${ON_INIT_MODULE} -eq 1 ]
++		then
++			echo -n " ON_INIT_MODULE"
++		fi
++
+ 		if [ ${ON_CLOSE_MODIFIED} -eq 1 ]
+ 		then
+ 			echo -n " ON_CLOSE_MODIFIED"
+@@ -1527,6 +1543,7 @@ ON_EXEC=1
+ ON_UNLINK=0
+ ON_RMDIR=0
+ ON_CLOSE_MODIFIED=0
++ON_INIT_MODULE=0
+ COMPAT1=1
+ TRUSTED=1
+ DEVFS=0
+@@ -1602,6 +1619,12 @@ do
+ 		--enable-event-rmdir)
+ 			ON_RMDIR=1
+ 			;;
++		--disable-event-init-module)
++			ON_INIT_MODULE=0
++			;;
++		--enable-event-init-module)
++			ON_INIT_MODULE=1
++			;;
+ 		--enable-event-close-modified)
+ 			ON_CLOSE_MODIFIED=1
+ 			;;
+Index: dazuko_core.c
+===================================================================
+RCS file: /cvsroot/dazuko/dazuko/dazuko_core.c,v
+retrieving revision 1.67
+diff -u -p -r1.67 dazuko_core.c
+--- dazuko_core.c	30 Jul 2008 20:59:35 -0000	1.67
++++ dazuko_core.c	17 Mar 2009 20:47:10 -0000
+@@ -59,7 +59,7 @@ const char	*VERSION_NUMBER = DAZUKO_VERS
+ #define NUM_SLOTS	25
+ #endif
+ 
+-#define NUM_EVENTS	7
++#define NUM_EVENTS	8
+ 
+ #define AMC_UNSET	255
+ 
+@@ -336,6 +336,8 @@ static inline int dazuko_event2index(uns
+ 			return 5;
+ 		case DAZUKO_TRUST_REQUEST:
+ 			return 6;
++		case DAZUKO_ON_INIT_MODULE:
++			return 7;
+ 	}
+ 
+ 	return -1;
+@@ -359,6 +361,8 @@ static inline unsigned long dazuko_index
+ 			return DAZUKO_ON_RMDIR;
+ 		case 6:
+ 			return DAZUKO_TRUST_REQUEST;
++		case 7:
++			return DAZUKO_ON_INIT_MODULE;
+ 	}
+ 
+ 	return 0;
+@@ -2004,8 +2008,11 @@ static inline int dazuko_run_daemon(unsi
+ 			continue;
+ 
+ #ifdef ANONYMOUS_RESOLVE
++	if (event != DAZUKO_ON_INIT_MODULE)
++	{
+ 		if (!dazuko_should_scan(dfs, sl))
+ 			continue;
++	}
+ 
+ 		error = dazuko_run_daemon_on_slotlist(event, dfs->filename, dfs->filename_length, event_p, &(dfs->file_p), rc, sl, NULL);
+ #else
+@@ -2554,6 +2561,8 @@ dazuko_handle_request_get_an_access_begi
+ 	}
+ /* DOWN */
+ 
++if (s->event != DAZUKO_ON_INIT_MODULE)
++{
+ 	if (s->dfs != NULL)
+ 	{
+ 		/* Perform filename lookup in this context.
+@@ -2585,6 +2594,7 @@ dazuko_handle_request_get_an_access_begi
+ 		s->filename = s->dfs->filename;
+ 		s->filenamelength = s->dfs->filename_length;
+ 	}
++}
+ 
+ 	/* Slot IS in DAZUKO_WORKING state. Copy all the
+ 	 * necessary information to userspace structure. */
+Index: dazuko_events.h
+===================================================================
+RCS file: /cvsroot/dazuko/dazuko/dazuko_events.h,v
+retrieving revision 1.8
+diff -u -p -r1.8 dazuko_events.h
+--- dazuko_events.h	27 Jan 2008 15:58:42 -0000	1.8
++++ dazuko_events.h	17 Mar 2009 20:47:10 -0000
+@@ -44,6 +44,7 @@
+ #define	DAZUKO_ON_UNLINK		16
+ #define	DAZUKO_ON_RMDIR			32
+ #define	DAZUKO_TRUST_REQUEST		64
++#define	DAZUKO_ON_INIT_MODULE		128
+ 
+ /* trusted flags */
+ #define	DAZUKO_TRUST_CHILDREN		1
+Index: dazuko_linux.c
+===================================================================
+RCS file: /cvsroot/dazuko/dazuko/dazuko_linux.c,v
+retrieving revision 1.104
+diff -u -p -r1.104 dazuko_linux.c
+--- dazuko_linux.c	17 Jul 2008 17:45:54 -0000	1.104
++++ dazuko_linux.c	17 Mar 2009 20:47:18 -0000
+@@ -174,6 +174,16 @@ static int		dev_major = -1;
+ 	static asmlinkage long (*original_sys_rmdir)(const char USERPTR *pathname);
+ #endif
+ 
++#if defined(ON_INIT_MODULE_SUPPORT)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
++	static asmlinkage long (*original_sys_init_module)(void __user *umod, unsigned long len, const char __user *uargs);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
++	static asmlinkage long (*original_sys_init_module)(const char *name_user, struct module *mod_user);
++#else
++#warning "init_module syscall hook not supported on this kernel version"
++#endif
++#endif
++
+ 
+ static struct file_operations	fops = {
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
+@@ -2048,6 +2058,76 @@ asmlinkage long linux_dazuko_sys_rmdir(c
+ }
+ #endif
+ 
++#ifdef ON_INIT_MODULE_SUPPORT
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
++asmlinkage long linux_dazuko_sys_init_module(void __user *umod, unsigned long len, const char __user *uargs)
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
++asmlinkage long linux_dazuko_sys_init_module(const char *name_user, struct module *mod_user)
++#endif
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
++{
++	struct dazuko_file_struct	*dfs = NULL;
++	int				error = 0;
++	int				check_error = 0;
++	struct event_properties		event_p;
++	struct xp_daemon_id		xp_id;
++
++	xp_id.pid = current->pid;
++	xp_id.file = NULL;
++	xp_id.current_p = current;
++	xp_id.files = dazuko_get_files_struct(current);
++
++	check_error = dazuko_check_access(DAZUKO_ON_INIT_MODULE, 0, &xp_id, NULL);
++
++	if (xp_id.files != NULL)
++		dazuko_put_files_struct(xp_id.files);
++
++	if (!check_error)
++	{
++		dazuko_bzero(&event_p, sizeof(event_p));
++		event_p.pid = current->pid;
++		event_p.set_pid = 1;
++		event_p.uid = current->uid;
++		event_p.set_uid = 1;
++
++		dfs = (struct dazuko_file_struct *)xp_malloc(sizeof(struct dazuko_file_struct));
++		if (dfs != NULL)
++		{
++			dazuko_bzero(dfs, sizeof(struct dazuko_file_struct));
++
++			dfs->extra_data = (struct xp_file_struct *)xp_malloc(sizeof(struct xp_file_struct));
++			if (dfs->extra_data != NULL)
++			{
++				dazuko_bzero(dfs->extra_data, sizeof(struct xp_file_struct));
++
++				dfs->extra_data->user_filename = NULL;
++
++				error = dazuko_process_access(DAZUKO_ON_INIT_MODULE, dfs, &event_p, NULL);
++
++				dazuko_file_struct_cleanup(&dfs);
++			}
++			else
++			{
++			    xp_free(dfs);
++			    dfs = NULL;
++			}
++		}
++	}
++
++	if (error)
++	{
++		return -EPERM;
++	}
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
++	error = original_sys_init_module(umod, len, uargs);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
++	error = original_sys_init_module(name_user, mod_user);
++#endif
++	return error;
++}
++#endif /* KERNEL_VERSION >= 2.4.0 */
++#endif /* ON_INIT_MODULE_SUPPORT */
+ 
+ /* system hook */
+ 
+@@ -2320,6 +2400,10 @@ inline int xp_sys_hook(void)
+ 	DAZUKO_HOOK(rmdir);
+ #endif
+ 
++#ifdef ON_INIT_MODULE_SUPPORT
++	DAZUKO_HOOK(init_module);
++#endif
++
+ #ifdef SYSCALL_TABLE_READONLY
+ 	/* protect the syscall table */
+ 	if (syscall_writable <= 0)
+@@ -2400,6 +2484,10 @@ inline int xp_sys_unhook(void)
+ 	DAZUKO_UNHOOK(rmdir);
+ #endif
+ 
++#ifdef ON_INIT_MODULE_SUPPORT
++	DAZUKO_UNHOOK(init_module);
++#endif
++
+ #ifdef SYSCALL_TABLE_READONLY
+ 	/* protect the syscall table */
+ 	if (syscall_writable <= 0)

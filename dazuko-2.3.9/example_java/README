@@ -1,0 +1,22 @@
+This is a Java wrapper for Dazuko, provided by Alexander Ellwein.
+It allows Java applications to interface directly with Dazuko.
+
+The provided Makefile assumes that Java is installed in /usr/java
+(If your java installation is not in /usr/java, please add a link or
+change the JAVA_HOME variable in the Makefile.)
+
+The Makefile also assumes that javac is in the current path.
+
+
+To build and install the DazukoWrapper JNI Library
+==================================================
+make
+make install
+
+
+To run the example program (as root)
+====================================
+java Example <dir> <dir> ...
+
+
+The Java example program functions exactly the same as the C version.

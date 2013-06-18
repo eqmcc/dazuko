@@ -1,0 +1,147 @@
+Introduction
+============
+
+This is a Ruby extension to interface with Dazuko.  It wraps the
+C library and provides a Ruby style object oriented access to the
+Dazuko device.  An example application demonstrating how to
+interface with Dazuko is provided as well.
+
+This Ruby extension is part of the Dazuko distribution and was
+released under the BSD license.  The original implementation was
+done by Gerhard Sittig.
+
+Summary for the impatient
+=========================
+
+For those who don't feel like reading all this lengthy stuff,
+here is an outline of which commands to run.
+
+$ make -C ../library
+$ ruby extconf.rb
+$ make
+# ruby test.rb
+# make install
+# ruby example.rb `pwd -P`
+$ rdoc
+
+The remainder of the document merely explains what the commands
+are good for ... :>
+
+Installing the module
+=====================
+
+You have to build the dazuko C library before you will be able to
+continue here.  If you haven't done so before, issue the following
+command:
+
+$ make -C ../library
+
+The Ruby interface is a wrapper written in C.  Installation is done
+with the usual steps, while the below notes should be taken into
+consideration:
+
+$ ruby extconf.rb
+$ make
+# ruby test.rb (optional)
+# make install
+
+Note that Dazuko only allows applications to register which have
+root privileges.  Thus you need to run the unit test command as
+root.  Since the "make install" command usually updates system wide
+locations not writable for regular users you have to run this command
+as root, too.
+
+The unit test currently tries to get an access but configures the
+request to automatically unblock itself.  Should this not work for
+you (should a test case "hang" or "block" on your system), just
+access the test.rb script with file(1), wc(1), head(1), or
+whatever command looks the most harmless to you.  Alternatively
+you may want to increment the sleep timeout in the
+help_schedule_access() method should it turn out to be a timing
+problem on your machine.
+
+It may be necessary to run "make install" before running the unit
+test.  This sounds funny but erroneous behaviour might be seen
+when the test script loads a previous version of the extension
+from a system wide location while it expects to find the newer
+version from the local directory it wants to test.  I don't know
+for sure if specifying "./Dazuko" in the "require" statement fixes
+this situation, but "make install" does.  A rule of thumb can be
+that if you installed the extension once, you need to install it
+again when you compile a new version.  You may leave the
+installation step but then you have to put the extension binary
+next to the applications using it.
+
+Testing the module
+==================
+
+Once the Dazuko.so file is in place (this is done with the above
+"make install" command) you can try the example script.  Again,
+this has to be done as root since the program wants to register
+with Dazuko.
+
+# ruby example.rb `pwd -P`
+
+You should see output running over the screen when you start accessing
+files in the directory you passed to the example script.  Stop the
+example program with CTRL-C.
+
+Advanced test scenario
+======================
+
+See "ruby example.rb --help" for details on what else the example
+script is able to do.
+
+You may want to try the "--deny" option.  When you do so, please
+understand that this will deny access to files and directories in
+and below the directories you passed to the script (if the
+condition hits which was coded into the script).  Make sure you do
+this only on directories not vital to your system's health!  See
+the README of the Perl binding for a possible test scenario.
+
+Using multiple threads from within one process is possible, too,
+but has not been tested by me too much.  See the "--thrd" option
+should you want to try this for yourself.
+
+Writing applications
+====================
+
+Now everything should be well and you can start writing your own
+Dazuko enabled Ruby applications.  See the embedded documentation
+in the Dazuko.c source file for details.  Some Ruby installations
+come with a tool to extract the information and format it nicely.
+Please check if running "rdoc [ -f html ] Dazuko.c" works for you
+and creates a doc/ directory with HTML files in it.
+
+Known issues
+============
+
+Although I'm quite confident that the extension and the example
+script are in acceptable Ruby style, there is always room for
+improvement.  Feedback is very welcome.  After all, this is my
+very first Ruby code, finished only one week after starting to
+learn Ruby. :)
+
+These are the areas I consider candidates for future work:
+- the access handler code block for the get_access() method can
+  be passed a hash instead an array, this was easy to implement
+  and even can be expanded further should one wish to; I have not
+  too strong an idea about the performance penalty -- hashes are a
+  little more expensive to access than arrays are but the code
+  will be much more readable on the ruby side, and when real work
+  is done in the access handler the data conversion probably can
+  be neglected (should one feel the urge to save a few cycles one
+  could always call access_want("Array") -- or switch to the pure
+  C library :)
+- I'm not sure if there is a memory leak, I could not see one
+  after running the program under heavy load for some twelve
+  hours: memory usage increases in the very first few seconds to
+  stay there for the rest of the program's lifetime (and on top
+  it's hard to tell leaks in direct actions from regular ups and
+  downs because of the garbage collection mechanism) -- if only I
+  knew how to reliably release the access event details data
+  structure in the get_access() method, hmmm ... (I don't like the
+  idea of the Ruby handler having to free the data)
+- the documentation is maintained almost only for Dazuko.c and
+  might need a more appealing markup (although the content can be
+  considered complete and correct)

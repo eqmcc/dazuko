@@ -1,0 +1,2223 @@
+#!/bin/sh
+#set -x
+
+#  Dazuko configure. Configure Dazuko for easy compilation.
+#  Written by John Ogness <dazukocode@ogness.net>
+#
+#  Copyright (c) 2003, 2004, 2005, 2006 H+BEDV Datentechnik GmbH
+#  Copyright (c) 2006, 2007 Avira GmbH
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions
+#  are met:
+#
+#  1. Redistributions of source code must retain the above copyright notice,
+#  this list of conditions and the following disclaimer.
+#
+#  2. Redistributions in binary form must reproduce the above copyright notice,
+#  this list of conditions and the following disclaimer in the documentation
+#  and/or other materials provided with the distribution.
+#
+#  3. Neither the name of Dazuko nor the names of its contributors may be used
+#  to endorse or promote products derived from this software without specific
+#  prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+
+
+print_help()
+{
+	echo "\`configure' configures Dazuko to adapt to many kinds of systems."
+	echo ""
+	echo "Usage: ./configure [OPTION]..."
+	echo ""
+	echo "Configuration:"
+	echo "  -h, --help   display this help and exit"
+	echo ""
+	echo "override auto-detection values"
+	echo "  --kernelsrcdir=DIR      kernel source files in DIR (Linux only)"
+	echo "  --kernelobjdir=DIR      kernel build source files in DIR (Linux only)"
+	echo "  --devicemajor=MAJ       use MAJ for device major number"
+	echo "  --procs-per-group=NUM   allow up to NUM processes per group"
+	echo "  --mapfile=MAP           use MAP as System.map file (linux26+syscalls only)"
+	echo "  --sct-readonly          handle sct as read-only (linux26+syscalls only)"
+	echo "  --sct-nocheck           assume sct is writable (linux26+syscalls only)"
+	echo "  --redirfsdir=DIR        RedirFS development files"
+	echo "  --system=SYS            configure for system SYS (linux22,linux24,linux26,"
+	echo "                                                    freebsd4,freebsd5"
+	echo "                                                    freebsd6,freebsd7)"
+	echo "                                                    dummyos)"
+	echo ""
+	echo "optional features"
+	echo "  --disable-FEATURE               do not include FEATURE"
+	echo "  --enable-FEATURE                include FEATURE"
+	echo "  --disable-event-open            do not capture ON_OPEN events"
+	echo "  --disable-event-close           do not capture ON_CLOSE events"
+	echo "  --disable-event-exec            do not capture ON_EXEC events"
+	echo "  --enable-event-unlink           capture ON_UNLINK events"
+	echo "  --enable-event-rmdir            capture ON_RMDIR events"
+	echo "  --enable-event-close-modified   capture ON_CLOSE_MODIFIED events"
+	echo "  --disable-trusted               disable support for trusted applications"
+	echo "  --disable-stacking              disable LSM stacking (Linux 2.6 only)"
+	echo "  --disable-rsbac                 disable RSBAC support (Linux only)"
+	echo "  --disable-chroot-support        disable resolving chroot'd filenames"
+	echo "  --disable-local-dpath           disable local __d_path() (Linux 2.6 only)"
+	echo "  --disable-compat1               disable 1.x compatibility (IO/Linux only)"
+	echo "  --enable-debug                  print extra debug information"
+	echo "  --enable-syscalls               hook syscalls, not LSM (Linux 2.6 only)"
+	echo "  --enable-redirfs                use RedirFS (Linux 2.6 only)"
+	echo "  --enable-anon-resolve           resolve paths in registered daemon context"
+	echo "  --disable-anon-resolve          resolve paths in accessing process context"
+	echo ""
+	echo "optional packages"
+	echo "  --with-PACKAGE                  use PACKAGE"
+	echo "  --without-PACKAGE               do not use PACKAGE"
+	echo "  --without-module                do not build kernel module"
+	echo "  --without-library               do not build library"
+	echo "  --without-example-c             do not build C example"
+	echo "  --with-dep                      build dependencies (Linux only)"
+	echo "  --with-example-java             build Java example"
+	echo "  --with-example-perl             build Perl example"
+	echo "  --with-example-python           build Python example"
+	echo ""
+	echo "Report bugs to <dazukocode@ogness.net>."
+}
+
+linux_check_srcdir()
+{
+	if [ -z "$LINUX_SRC" ]
+	then
+		echo -n "kernel source in ${LINUX_CHECK_SRC}... "
+
+		if [ -f "${LINUX_CHECK_SRC}/include/linux/kernel.h" ]
+		then
+			LINUX_SRC="$LINUX_CHECK_SRC"
+			echo "yes"
+		else
+			echo "no"
+		fi
+	fi
+}
+
+linux_check_objdir()
+{
+	if [ -z "$LINUX_OBJ" ]
+	then
+		echo -n "kernel build source in ${LINUX_CHECK_OBJ}... "
+
+		if [ -f "${LINUX_CHECK_OBJ}/include/linux/version.h" ]
+		then
+			if [ -f "${LINUX_CHECK_OBJ}/include/linux/autoconf.h" -o -f "${LINUX_CHECK_OBJ}/include/generated/autoconf.h" ]
+			then
+				LINUX_OBJ="$LINUX_CHECK_OBJ"
+				echo "yes"
+			else
+				echo "no"
+			fi
+		else
+			echo "no"
+		fi
+	fi
+}
+
+do_lib_generic()
+{
+	echo "configure: creating library/Makefile"
+
+	mkdir -p library
+
+	echo "CC ?= ${CC}" > library/Makefile
+	echo "RM ?= rm -f" >> library/Makefile
+	echo "CFLAGS = -Wall -O" >> library/Makefile
+	echo "CFLAGS += -I.." >> library/Makefile
+	echo "CFLAGS += -fPIC" >> library/Makefile
+
+	if [ $DUMMYOS -ne 0 ]
+	then
+		echo "CFLAGS += -DDUMMYOS" >> library/Makefile
+	fi
+
+	echo "OBJS = dazukoio_core.o dazukoio_trusted_core.o dazuko_transport.o $LIB_EXT_TYPE.o" >> library/Makefile
+
+	if [ $COMPAT1 -eq 0 ]
+	then
+		echo "CFLAGS += -DNO_COMPAT1" >> library/Makefile
+	else
+		echo "OBJS += dazukoio_linux_compat1.o" >> library/Makefile
+	fi
+
+	echo "" >> library/Makefile
+	echo "all: libdazuko.a" >> library/Makefile
+
+	echo "" >> library/Makefile
+	echo "libdazuko.a: \$(OBJS)" >> library/Makefile
+	echo "	ar r libdazuko.a \$(OBJS)" >> library/Makefile
+	echo "	ranlib libdazuko.a" >> library/Makefile
+
+	for item in dazukoio_core dazukoio_trusted_core dazuko_transport $LIB_EXT_TYPE dazukoio_linux_compat1
+	do
+		echo "" >> library/Makefile
+
+		echo -n "$item.o: ../$item.c" >> library/Makefile
+		if [ -f "$item.h" ]
+		then
+			echo -n " ../$item.h" >> library/Makefile
+		fi
+		echo "" >> library/Makefile
+
+		echo "	\$(CC) \$(CFLAGS) -c ../$item.c -o $item.o" >> library/Makefile
+	done
+
+	echo "" >> library/Makefile
+	echo "clean:" >> library/Makefile
+	echo "	\$(RM) -f *.o *.a" >> library/Makefile
+}
+
+do_lib_freebsd()
+{
+	echo "configure: creating library/Makefile"
+
+	mkdir -p library
+
+	SRCLIST="dazukoio_core.c dazukoio_trusted_core.c dazuko_transport.c $LIB_EXT_TYPE.c"
+	INCLIST="dazukoio_core.h dazukoio_trusted.h $LIB_EXT_TYPE.h dazukoio.h dazuko_transport.h dazuko_events.h dazukoio_platform.h dazuko_version.h"
+
+	for item in $SRCLIST $INCLIST
+	do
+		if [ ! -e library/$item ]
+		then
+			ln -s ../$item library/$item
+		fi
+	done
+
+	echo "LIB = dazuko" > library/Makefile
+	echo "NOMAN =" >> library/Makefile
+
+	echo "SRCS = $SRCLIST" >> library/Makefile
+	echo "INCS = $INCLIST" >> library/Makefile
+
+	echo "CFLAGS += -Wall" >> library/Makefile
+	echo "CFLAGS += -DNO_COMPAT1" >> library/Makefile
+	echo "CFLAGS += -fPIC" >> library/Makefile
+
+	if [ $DUMMYOS -ne 0 ]
+	then
+		echo "CFLAGS += -DDUMMYOS" >> library/Makefile
+	fi
+
+	echo "" >> library/Makefile
+
+	echo ".include <bsd.lib.mk>" >> library/Makefile
+}
+
+do_example_c_generic()
+{
+	echo "configure: creating example_c/Makefile"
+
+	mkdir -p example_c
+
+	echo "CC ?= ${CC}" > example_c/Makefile
+	echo "RM ?= rm -f" >> example_c/Makefile
+	echo "CFLAGS = -Wall -O" >> example_c/Makefile
+	echo "CFLAGS += -I.." >> example_c/Makefile
+	echo "LFLAGS = -L../library" >> example_c/Makefile
+	echo "" >> example_c/Makefile
+	echo "all: example example_mt" >> example_c/Makefile
+	echo "" >> example_c/Makefile
+	echo "lib:" >> example_c/Makefile
+	echo "	cd ../library && make" >> example_c/Makefile
+	echo "" >> example_c/Makefile
+	echo "example: example.c lib" >> example_c/Makefile
+	echo "	\$(CC) \$(CFLAGS) \$(LFLAGS) -o example example.c -ldazuko" >> example_c/Makefile
+	echo "" >> example_c/Makefile
+	echo "example_mt: example_mt.c lib" >> example_c/Makefile
+	echo "	\$(CC) \$(CFLAGS) \$(LFLAGS) -pthread -o example_mt example_mt.c -ldazuko" >> example_c/Makefile
+	echo "" >> example_c/Makefile
+	echo "clean:" >> example_c/Makefile
+	echo "	\$(RM) example example_mt *.o" >> example_c/Makefile
+}
+
+do_example_java_generic()
+{
+	echo "configure: creating example_java/Makefile"
+
+	mkdir -p example_java
+
+	echo "CC ?= ${CC}" > example_java/Makefile
+	echo "RM ?= rm -f" >> example_java/Makefile
+	echo "JAVAC ?= javac" >> example_java/Makefile
+	echo "JNI_TARGET = dazuko_jni.so" >> example_java/Makefile
+	echo "JAVA_TARGET = Example.class" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "JAVA_HOME ?= /usr/java" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "CFLAGS += -Wall -O" >> example_java/Makefile
+	echo "CFLAGS += -I.." >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "# java includes" >> example_java/Makefile
+	echo "CFLAGS += -I\$(JAVA_HOME)/include -I\$(JAVA_HOME)/include/linux" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "# shared library" >> example_java/Makefile
+	echo "CFLAGS += -shared" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "# debug" >> example_java/Makefile
+	echo "#CFLAGS += -D_WRAPPER_DEBUG_" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "LFLAGS = -L../library" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "all: \$(JNI_TARGET) \$(JAVA_TARGET)" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "lib:" >> example_java/Makefile
+	echo "	cd ../library && make" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "\$(JNI_TARGET): dazuko_jni.c lib" >> example_java/Makefile
+	echo "	\$(CC) \$(CFLAGS) \$(LFLAGS) -o \$(JNI_TARGET) dazuko_jni.c -ldazuko" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "\$(JAVA_TARGET): org/dazuko/DazukoAccess.java org/dazuko/Dazuko.java Example.java" >> example_java/Makefile
+	echo "	\$(JAVAC) Example.java" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "install: \$(JNI_TARGET)" >> example_java/Makefile
+	echo "	mkdir -p \$(JAVA_HOME)/jre/lib/i386" >> example_java/Makefile
+	echo "	cp -i \$(JNI_TARGET) \$(JAVA_HOME)/jre/lib/i386/lib\$(JNI_TARGET)" >> example_java/Makefile
+	echo "" >> example_java/Makefile
+	echo "clean:" >> example_java/Makefile
+	echo "	\$(RM) \$(JNI_TARGET) \$(JAVA_TARGET) org/dazuko/*.class *.class" >> example_java/Makefile
+}
+
+do_example_perl_generic()
+{
+	if [ -f "example_perl/Makefile.PL" ]
+	then
+		cd example_perl
+		perl Makefile.PL > /dev/null 2>&1
+
+		if [ $? -eq 0 ]
+		then
+			echo "configure: creating example_perl/Makefile"
+		fi
+
+		cd ..
+	fi
+}
+
+do_example_python_generic()
+{
+	echo "configure: creating example_python/Makefile"
+
+	mkdir -p example_python
+
+	echo "# ----- Makefile ------------------------------------------------" > example_python/Makefile
+	echo "# Makefile for the Dazuko Python binding, actually not necessary" >> example_python/Makefile
+	echo "# but comes in handy in the development process :)" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "RM ?= rm -f" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "# the two most important targets: build and install the module" >> example_python/Makefile
+	echo "all: lib" >> example_python/Makefile
+	echo "	python setup.py build" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "install:" >> example_python/Makefile
+	echo "	python setup.py install" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "lib:" >> example_python/Makefile
+	echo "	cd ../library && make" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "# aux targets" >> example_python/Makefile
+	echo "clean:" >> example_python/Makefile
+	echo "	python setup.py clean" >> example_python/Makefile
+	echo "	\$(RM) *.pyc" >> example_python/Makefile
+	echo "	\$(RM) -r build dist" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "# "setup.py build" cannot cope well with relative include paths" >> example_python/Makefile
+	echo "fixmk:" >> example_python/Makefile
+	echo "	sed \"s!\'\.\.\'!'`pwd`/..'!\" < setup.py > setup.py.abs" >> example_python/Makefile
+	echo "	mv setup.py.abs setup.py" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "# don't know who needs the dist targets, but here they are ..." >> example_python/Makefile
+	echo "sdist:" >> example_python/Makefile
+	echo "	python setup.py sdist" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "bdist:" >> example_python/Makefile
+	echo "	python setup.py bdist_rpm" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "tags::" >> example_python/Makefile
+	echo "	ctags -dt *.[ch]" >> example_python/Makefile
+	echo "" >> example_python/Makefile
+	echo "# ----- E O F ---------------------------------------------------" >> example_python/Makefile
+}
+
+do_rsbac()
+{
+	echo "configure: creating Makefile"
+
+	echo "#" > Makefile
+	echo "# File: rsbac/adf/daz/Makefile" >> Makefile
+	echo "#" >> Makefile
+	echo "# Makefile for the Linux rsbac DAZ decision module." >> Makefile
+	echo "#" >> Makefile
+	echo "# Author and (c) 1999-2004 Amon Ott" >> Makefile
+	echo "# (modified by Avira GmbH)" >> Makefile
+	echo "#" >> Makefile
+	echo "" >> Makefile
+	echo "ifeq (\$(PATCHLEVEL),4)" >> Makefile
+	echo "" >> Makefile
+	echo "O_TARGET := daz.o" >> Makefile
+	echo "obj-y    := dazuko_rsbac.o dazuko_core.o dazuko_transport.o" >> Makefile
+	echo "export-objs := dazuko_rsbac.o" >> Makefile
+	echo "include \$(TOPDIR)/Rules.make" >> Makefile
+	echo "" >> Makefile
+	echo "else" >> Makefile
+	echo "# 2.6" >> Makefile
+	echo "obj-y    := dazuko_rsbac.o dazuko_core.o dazuko_transport.o" >> Makefile
+	echo "" >> Makefile
+	echo "endif" >> Makefile
+}
+
+get_src_path()
+{
+	SRC_PATH="${LINUX_SRC}${SRC_PATH_END}"
+	if [ ! -f "${SRC_PATH}" ]
+	then
+		SRC_PATH="${LINUX_OBJ}${SRC_PATH_END}"
+	fi
+}
+
+check_use_parent()
+{
+	echo -n "inspecting task_struct structure... "
+
+	SRC_PATH_END="/include/linux/sched.h"
+	get_src_path
+
+	if [ ! -f "$SRC_PATH" ]
+	then
+		echo "not found (assuming standard)"
+	else
+		grep p_pptr "$SRC_PATH" > /dev/null 2>&1
+		if [ $? -ne 0 ]
+		then
+			LINUX_USE_PARENT=1
+			echo "ok (using parent)"
+		else
+			echo "ok"
+		fi
+	fi
+}
+
+do_linux26()
+{
+	if [ $LINUX26_USE_SYSCALLS -eq 0 -a $LINUX26_USE_REDIRFS -eq 1 ]
+	then
+		echo -n "checking for RedirFS source code... "
+		if [ ! -f "${REDIRFS_DIR}/redirfs.h" ]
+		then
+			echo "not found"
+			echo "error: please make sure the RedirFS code is available in $REDIRFS_DIR"
+			exit 1
+		fi
+		echo "found ($REDIRFS_DIR)"
+
+		echo -n "checking for RedirFS module symbols... "
+		if [ -f "${REDIRFS_DIR}/Module.symvers" ]
+		then
+			cp -f "${REDIRFS_DIR}/Module.symvers" .
+			echo "found"
+		else
+			echo "not found"
+		fi
+
+	elif [ $LINUX26_USE_SYSCALLS -eq 0 -a $LINUX26_USE_REDIRFS -eq 0 ]
+	then
+		echo -n "checking if security module support is enabled... "
+		if [ $CONFIG_SECURITY -eq 0 ]
+		then
+			echo "no"
+			echo "error: security module support must be enabled in your kernel"
+			exit 1
+		else
+			echo "yes"
+		fi
+
+		echo -n "verifying capabilities are not built-in... "
+		if [ $CONFIG_SECURITY_CAPABILITIES -ne 0 ]
+		then
+			echo "built-in :("
+			echo "error: capabilities are built-in to the kernel:"
+			echo "       you will need to recompile a kernel with capabilities"
+			echo "       as a kernel module"
+			exit 1
+		else
+			echo "ok"
+		fi
+
+		if [ $CONFIG_SECURITY_CAPABILITIES_MODULE -eq 0 ]
+		then
+			NO_CAPABILITIES=1
+		fi
+
+		echo -n "locating LSM API header... "
+
+		SRC_PATH_END="/include/linux/security.h"
+		get_src_path
+
+		if [ ! -f "$SRC_PATH" ]
+		then
+			echo "failed"
+			echo "error: unable to locate security.h"
+			exit 1
+		else
+			echo "ok"
+		fi
+
+		echo -n "identifying LSM API (this can take a while)... "
+		if [ ! -x "linux_lsm_conf" ]
+		then
+			echo "failed"
+			echo "error: linux_lsm_conf missing in Dazuko distribution"
+			exit 1
+		fi
+
+		./linux_lsm_conf $SRC_PATH
+		if [ $? -ne 0 ]
+		then
+			echo "failed"
+			echo "error: could not analyze security.h"
+			exit 1
+		fi
+
+		echo "ok"
+	else
+		NO_CAPABILITIES=1
+
+		LINUX26_SYSCALL_CFLAGS="$LINUX26_SYSCALL_CFLAGS -DHIDDEN_SCT -DUSE_SYSCALLS -DNO_LINUX24_MODVERSIONS"
+
+		if [ $LOCAL_DPATH -eq 2 ]
+		then
+			LOCAL_DPATH=1
+
+			if [ -f "/proc/kallsyms" ]
+			then
+				echo -n "checking whether __d_path() is exported... "
+
+				if [ -z "`grep T.*__d_path /proc/kallsyms`" ]
+				then
+					if [ $CONFIG_SMP -eq 1 ]
+					then
+						echo "no (using local copy, dangerous)"
+					else
+						echo "no (using local copy)"
+					fi
+				else
+					LOCAL_DPATH=0
+					echo "yes"
+				fi
+			fi
+		fi
+
+		echo -n "checking for System.map file... "
+		if [ -z "$MAPFILE" ]
+		then
+			echo "failed"
+			echo "error: no System.map file specified,"
+			echo "       please use --mapfile"
+			exit 1
+		fi
+
+		if [ -f "$MAPFILE" ]
+		then
+			echo "ok ($MAPFILE)"
+		else
+			echo "failed"
+			echo "error: $MAPFILE not found"
+			exit 1
+		fi
+
+		SRC_PATH_END="/include/linux/syscalls.h"
+		get_src_path
+
+		if [ -f "$SRC_PATH" ]
+		then
+			LINUX26_USE_SYSCALLS_H=1
+		fi
+
+		echo -n "locating sys_call_table... "
+
+		ADDRESS=`awk '$3 == "sys_call_table" { print $1 }' $MAPFILE`
+		if [ -z "$ADDRESS" ]
+		then
+			echo "failed"
+			echo "error: unable to locate kernel symbol 'sys_call_table'"
+			echo "       unable to support syscall hooking"
+			exit 1
+		fi
+
+		echo "ok (0x$ADDRESS)"
+		LINUX26_SYSCALL_CFLAGS="$LINUX26_SYSCALL_CFLAGS -DSYS_CALL_TABLE_ADDR=0x$ADDRESS"
+
+		echo -n "checking sys_call_table status... "
+
+		if [ $PERFORM_SCT_CHECK -eq 0 ]
+		then
+			echo "read-write (no checks)"
+		else
+			if [ $LINUX26_SYSCALLTABLE_READONLY -ne 0 ]
+			then
+				echo "read-only (forced)"
+				LINUX26_SYSCALL_CFLAGS="$LINUX26_SYSCALL_CFLAGS -DSYSCALL_TABLE_READONLY -DPERFORM_SCT_CHECK"
+			else
+				ADDRESS_STATUS=`awk '$3 == "sys_call_table" { print $2 }' $MAPFILE`
+				if [ "$ADDRESS_STATUS" = "R" ]
+				then
+					echo "read-only"
+					echo ""
+					echo "IMPORTANT NOTE:"
+					echo "If you get a kernel panic or segmentation fault while loading"
+					echo "the Dazuko module, you will need to reboot and try to"
+					echo "configure Dazuko again with the --sct-readonly option."
+					echo ""
+				else
+					echo "read-write"
+				fi
+				LINUX26_SYSCALL_CFLAGS="$LINUX26_SYSCALL_CFLAGS -DPERFORM_SCT_CHECK"
+			fi
+		fi
+
+		if [ ${ON_EXEC} -eq 1 ]
+		then
+			echo -n "locating do_execve... "
+
+			ADDRESS=`awk '$3 == "do_execve" { print $1 }' $MAPFILE`
+			if [ -z "$ADDRESS" ]
+			then
+				echo "failed"
+				echo "error: unable to locate kernel symbol 'do_execve'"
+				echo "       unable to support exec events"
+				exit 1
+			fi
+
+			echo "ok (0x$ADDRESS)"
+			LINUX26_SYSCALL_CFLAGS="$LINUX26_SYSCALL_CFLAGS -DDO_EXECVE_ADDR=0x$ADDRESS"
+		fi
+	fi
+
+	SRC_PATH_END="/include/linux/device.h"
+	get_src_path
+
+	echo -n "identifying device API... "
+	if [ ! -x "linux_dev_conf" ]
+	then
+		echo "failed"
+		echo "error: linux_dev_conf missing in Dazuko distribution"
+		exit 1
+	fi
+
+	./linux_dev_conf $SRC_PATH
+	if [ $? -ne 0 ]
+	then
+		echo "failed"
+		echo "error: could not analyze device.h"
+		exit 1
+	fi
+
+	echo "ok"
+
+	echo -n "inspecting class type... "
+
+	if [ -f "$SRC_PATH" ]
+	then
+		grep class_simple_create "$SRC_PATH" > /dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			LINUX26_USE_CLASS=2
+		else
+			grep 'class_create(' "$SRC_PATH" > /dev/null 2>&1
+			if  [ $? -eq 0 ]
+			then
+				LINUX26_USE_CLASS=1
+			fi
+		fi
+	fi
+	if [ $LINUX26_USE_CLASS -eq 0 ]
+	then
+		echo "ok (no udev support)"
+	elif [ $LINUX26_USE_CLASS -eq 1 ]
+	then
+		echo "ok (class)"
+	else
+		echo "ok (class_simple)"
+	fi
+
+	SRC_PATH_END="/include/linux/namei.h"
+	get_src_path
+
+	echo -n "inspecting nameidata type... "
+	if [ -f "$SRC_PATH" ]
+	then
+		grep "struct path" "$SRC_PATH" > /dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			LINUX26_USE_NDPATH=1
+		fi
+	fi
+	if [ $LINUX26_USE_NDPATH -eq 0 ]
+	then
+		echo "ok (dentry/mnt)"
+	else
+		echo "ok (path)"
+	fi
+
+	echo -n "inspecting suspend function... "
+
+	# look for suspend (2) functions in "freezer.h"
+
+	SRC_PATH_END="/include/linux/freezer.h"
+	get_src_path
+
+	if [ -f "$SRC_PATH" ]
+	then
+		LINUX26_USE_FREEZER=1
+
+		grep "try_to_freeze.*(.*void.*)" "$SRC_PATH" > /dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			LINUX26_USE_SUSPEND=1
+		fi
+	else
+
+		# look for suspend (1) function in "sched.h"
+
+		SRC_PATH_END="/include/linux/sched.h"
+		get_src_path
+
+		if [ -f "$SRC_PATH" ]
+		then
+			grep "try_to_freeze.*(.*void.*)" "$SRC_PATH" > /dev/null 2>&1
+			if [ $? -eq 0 ]
+			then
+				LINUX26_USE_SUSPEND=1
+			fi
+		fi
+	fi
+
+	if [ $LINUX26_USE_SUSPEND -eq 1 ]
+	then
+		echo "ok (suspend2)"
+	else
+		echo "ok (suspend1)"
+	fi
+
+	check_use_parent
+
+	if [ $LINUX26_USE_SYSCALLS -eq 0 ]
+	then
+		# we are using LSM
+		echo "NOOP: ON_EXEC allowed" > /dev/null
+	elif [ $CONFIG_X86 -ne 0 -a $CONFIG_X86_64 -eq 0 ]
+	then
+		# we are using syscalls with x86 (32-bit)
+		echo "NOOP: ON_EXEC allowed" > /dev/null
+	elif [ $ON_EXEC -eq 0 ]
+	then
+		# ON_EXEC is already deactivated
+		echo "NOOP: ON_EXEC not wanted" > /dev/null
+	else
+		# we have ON_EXEC activated with syscalls on a non-x86 (32-bit) platform
+		echo "disabling ON_EXEC events (only available on x86 platforms)"
+		ON_EXEC=0
+	fi
+
+	if [ $ON_CLOSE -ne 0 -a $LINUX26_USE_SYSCALLS -eq 0 ]
+	then
+		echo "disabling ON_CLOSE events (not available for Linux 2.6 LSM/RedirFS)"
+		ON_CLOSE=0
+	fi
+
+	if [ ${ON_UNLINK} -ne 0 -a $LINUX26_USE_SYSCALLS -eq 0 ]
+	then
+		echo "disabling ON_UNLINK events (not available for Linux 2.6 LSM/RedirFS)"
+		ON_UNLINK=0
+	fi
+
+	if [ ${ON_RMDIR} -ne 0 -a $LINUX26_USE_SYSCALLS -eq 0 ]
+	then
+		echo "disabling ON_RMDIR events (not available for Linux 2.6 LSM/RedirFS)"
+		ON_RMDIR=0
+	fi
+
+	if [ ${ON_CLOSE_MODIFIED} -ne 0 -a $LINUX26_USE_SYSCALLS -eq 0 ]
+	then
+		echo "disabling ON_CLOSE_MODIFIED events (not available for Linux 2.6 LSM/RedirFS)"
+		ON_CLOSE_MODIFIED=0
+	fi
+
+	echo "configure: creating Makefile"
+
+	echo -n > Makefile
+
+	if [ ${LINUX26_USE_SYSCALLS} -eq 0 ]
+	then
+		if [ ${LINUX26_USE_REDIRFS} -eq 0 ]
+		then
+			LINUX26_OBJS="dazuko_linux26.o"
+		else
+			echo "EXTRA_CFLAGS += -I$REDIRFS_DIR" >> Makefile
+			LINUX26_OBJS="dazuko_redirfs.o"
+		fi
+		echo "EXTRA_CFLAGS += -Wall -DLINUX26_SUPPORT" >> Makefile
+	else
+		LINUX26_OBJS="dazuko_linux.o"
+		echo "EXTRA_CFLAGS += -Wall -DLINUX" >> Makefile
+	fi
+
+	if [ ${LSM_STACKING} -eq 1 ]
+	then
+		LINUX26_OBJS="dazuko_linux26_lsm.o ${LINUX26_OBJS}"
+	else
+		echo "EXTRA_CFLAGS += -DNO_STACKING_SUPPORT" >> Makefile
+	fi
+
+	if [ ${LOCAL_DPATH} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DWITH_LOCAL_DPATH" >> Makefile
+	fi
+
+	if [ ${DO_ANON_RESOLVE} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DANONYMOUS_RESOLVE" >> Makefile
+	fi
+
+	if [ ${NO_CAPABILITIES} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DNO_CAPABILITIES" >> Makefile
+	fi
+
+	if [ ${LINUX26_USE_SUSPEND} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DUSE_TRYTOFREEZEVOID" >> Makefile
+	fi
+
+	if [ ${LINUX26_USE_FREEZER} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DLINUX_USE_FREEZER_H" >> Makefile
+	fi
+
+	if [ ${LINUX26_USE_SYSCALLS_H} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DLINUX_USE_SYSCALLS_H" >> Makefile
+	fi
+
+	if [ ${LINUX26_USE_CLASS} -eq 0 ]
+	then
+		echo "EXTRA_CFLAGS += -DWITHOUT_UDEV" >> Makefile
+	fi
+
+	if [ ${LINUX26_USE_CLASS} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DUSE_CLASS" >> Makefile
+	fi
+
+	if [ ${LINUX26_USE_NDPATH} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DUSE_NDPATH" >> Makefile
+	fi
+
+	if [ $LINUX26_USE_CHROOT -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DUSE_CHROOT" >> Makefile
+	fi
+
+	if [ ${LINUX_USE_PARENT} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DTASKSTRUCT_USES_PARENT" >> Makefile
+	fi
+
+	if [ ${LINUX_USE_CONFIG_H} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DUSE_CONFIG_H" >> Makefile
+	fi
+
+	if [ ${LINUX_USE_GENERATED_AUTOCONF_H} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DUSE_GENERATED_AUTOCONF_H" >> Makefile
+	fi
+
+	if [ ${LINUX_USE_GENERATED_UTSRELEASE_H} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DUSE_GENERATED_UTSRELEASE_H" >> Makefile
+	fi
+
+	if [ ${DEBUG} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DDEBUG" >> Makefile
+	fi
+
+	if [ ${DEVFS} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DDEVFS_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_OPEN} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DON_OPEN_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_EXEC} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DON_EXEC_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DON_CLOSE_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE_MODIFIED} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DON_CLOSE_MODIFIED_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_UNLINK} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DON_UNLINK_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_RMDIR} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DON_RMDIR_SUPPORT" >> Makefile
+	fi
+
+	if [ ${TRUSTED} -eq 1 ]
+	then
+		echo "EXTRA_CFLAGS += -DTRUSTED_APPLICATION_SUPPORT" >> Makefile
+	fi
+
+	if [ ! -z "$DEVICEMAJOR" ]
+	then
+		echo "EXTRA_CFLAGS += -DDAZUKO_DM=$DEVICEMAJOR" >> Makefile
+	fi
+
+	if [ ! -z "$PPG" ]
+	then
+		echo "EXTRA_CFLAGS += -DNUM_SLOTS=$PPG" >> Makefile
+	fi
+
+	for item in $LINUX26_SYSCALL_CFLAGS
+	do
+		echo "EXTRA_CFLAGS += $item" >> Makefile
+	done
+
+	echo "RM ?= rm -f" >> Makefile
+
+	echo "obj-m += dazuko.o" >> Makefile
+	echo "dazuko-objs := dazuko_core.o dazuko_transport.o ${LINUX26_OBJS}" >> Makefile
+
+	echo "" >> Makefile
+	echo "dummy_rule:" >> Makefile
+	if [ $WITH_LINUX_DEP -ne 0 ]
+	then
+        	echo "	\$(MAKE) -C ${LINUX_OBJ} include/linux/version.h include/asm scripts" >> Makefile
+	fi
+        echo "	\$(MAKE) -C ${LINUX_OBJ} SUBDIRS=\"`pwd`\" modules" >> Makefile
+	echo "	touch dummy_rule" >> Makefile
+
+	MODULE_SUBDIR=$UTS_RELEASE
+	if [ -z "$MODULE_SUBDIR" ]
+	then
+		MODULE_SUBDIR=`uname -r`
+	fi
+
+	echo "" >> Makefile
+	echo "install: dummy_rule" >> Makefile
+	echo "	@! find /lib/modules/$MODULE_SUBDIR/ -name dazuko.ko | grep dazuko.ko || { echo \"!! a dazuko module is already installed !!\" ; echo \"!! please delete the old version before installing this one !!\" ; false ; }" >> Makefile
+	echo "	mkdir -p /lib/modules/$MODULE_SUBDIR/extra" >> Makefile
+	echo "	cp dazuko.ko /lib/modules/$MODULE_SUBDIR/extra" >> Makefile
+	echo "	/sbin/depmod -ae" >> Makefile
+
+	echo "" >> Makefile
+	echo "test: dummy_rule" >> Makefile
+	echo "	@test \`id -u\` -eq 0 || { echo \"!! you must be root !!\" ; false ; }" >> Makefile
+	if [ $NO_CAPABILITIES -eq 0 ]
+	then
+		echo "	/sbin/modprobe commoncap" >> Makefile
+	fi
+	echo "	/sbin/insmod ./dazuko.ko" >> Makefile
+	echo "	/sbin/rmmod dazuko" >> Makefile
+	echo "	@echo \"--> test successful :)\"" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko:" >> Makefile
+	echo "	@echo Just type \\\"make\\\", not \\\"make dazuko\\\"" >> Makefile
+	echo "" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko-smp:" >> Makefile
+	echo "	@echo Just type \\\"make\\\", not \\\"make dazuko-smp\\\"" >> Makefile
+
+	echo "" >> Makefile
+	echo "clean:" >> Makefile
+	echo "	\$(RM) .*.cmd *.cmd *.o dazuko.ko dazuko.mod.c dummy_rule" >> Makefile
+}
+
+do_linux()
+{
+	echo -n "checking if kernel is SMP... "
+
+	if [ $CONFIG_SMP -eq 0 ]
+	then
+		SMP=0
+		echo "no"
+	else
+		SMP=1
+		echo "yes"
+	fi
+
+	if [ $CONFIG_X86 -eq 0 -a $ON_EXEC -ne 0 ]
+	then
+		echo "disabling ON_EXEC events (only available on x86 platforms)"
+		ON_EXEC=0
+	fi
+
+	echo -n "checking whether sys_call_table is exported... "
+
+	if [ -f "/proc/ksyms" ]
+	then
+		if [ -z "`grep sys_call_table /proc/ksyms`" ]
+		then
+			HIDDEN_SCT=1
+			echo "no"
+		else
+			HIDDEN_SCT=0
+			echo "yes"
+		fi
+	else
+		HIDDEN_SCT=0
+		echo "unknown (assuming yes)"
+	fi
+
+	if [ ${HIDDEN_SCT} -eq 1 ]
+	then
+		echo -n "checking whether sys_close() is exported... "
+
+		if [ -z "`grep sys_close /proc/ksyms`" ]
+		then
+			echo "no"
+			echo "error: no usable exported symbols found"
+			exit 1
+		else
+			echo "yes"
+		fi
+	fi
+
+	check_use_parent
+
+	echo "configure: creating Makefile"
+
+	echo "CC ?= ${CC}" > Makefile
+	echo "RM ?= rm -f" >> Makefile
+	echo "CFLAGS += -Wall -O -DLINUX -Dlinux" >> Makefile
+
+	if [ $COMPAT1 -eq 0 ]
+	then
+		echo "CFLAGS += -DNO_COMPAT1" >> Makefile
+	fi
+
+	echo "KFLAGS += \$(CFLAGS) -D__KERNEL__ -DMODULE -I${LINUX_OBJ}/include -I${LINUX_SRC}/include" >> Makefile
+
+	if [ ${DO_ANON_RESOLVE} -eq 1 ]
+	then
+		echo "KFLAGS += -DANONYMOUS_RESOLVE" >> Makefile
+	fi
+
+	if [ ${SMP} -eq 1 ]
+	then
+		echo "KFLAGS += -D__SMP__" >> Makefile
+	fi
+
+	if [ ${DEBUG} -eq 1 ]
+	then
+		echo "KFLAGS += -DDEBUG" >> Makefile
+	fi
+
+	if [ ${DEVFS} -eq 1 ]
+	then
+		echo "KFLAGS += -DDEVFS_SUPPORT" >> Makefile
+	fi
+
+	if [ ${HIDDEN_SCT} -eq 1 ]
+	then
+		echo "KFLAGS += -DHIDDEN_SCT" >> Makefile
+	fi
+
+	if [ ${ON_OPEN} -eq 1 ]
+	then
+		echo "KFLAGS += -DON_OPEN_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE} -eq 1 ]
+	then
+		echo "KFLAGS += -DON_CLOSE_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_EXEC} -eq 1 ]
+	then
+		echo "KFLAGS += -DON_EXEC_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_UNLINK} -eq 1 ]
+	then
+		echo "KFLAGS += -DON_UNLINK_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_RMDIR} -eq 1 ]
+	then
+		echo "KFLAGS += -DON_RMDIR_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE_MODIFIED} -eq 1 ]
+	then
+		echo "KFLAGS += -DON_CLOSE_MODIFIED_SUPPORT" >> Makefile
+	fi
+
+	if [ ${TRUSTED} -eq 1 ]
+	then
+		echo "KFLAGS += -DTRUSTED_APPLICATION_SUPPORT" >> Makefile
+	fi
+
+	if [ ! -z "$DEVICEMAJOR" ]
+	then
+		echo "KFLAGS += -DDAZUKO_DM=$DEVICEMAJOR" >> Makefile
+	fi
+
+	if [ ! -z "$PPG" ]
+	then
+		echo "KFLAGS += -DNUM_SLOTS=$PPG" >> Makefile
+	fi
+
+	if [ ${LINUX_USE_PARENT} -eq 1 ]
+	then
+		echo "KFLAGS += -DTASKSTRUCT_USES_PARENT" >> Makefile
+	fi
+
+	echo "" >> Makefile
+	echo "all: dazuko.o" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko_core.o: dazuko_core.c dazuko_core.h" >> Makefile
+	echo "	\$(CC) \$(KFLAGS) -D__NO_VERSION__ -c dazuko_core.c" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko_transport.o: dazuko_transport.c dazuko_transport.h" >> Makefile
+	echo "	\$(CC) \$(KFLAGS) -D__NO_VERSION__ -c dazuko_transport.c" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko_linux.o: dazuko_linux.c dazuko_linux.h" >> Makefile
+	echo "	\$(CC) \$(KFLAGS) -c dazuko_linux.c" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko.o: dazuko_core.o dazuko_transport.o dazuko_linux.o" >> Makefile
+	echo "	ld -m elf_i386 -r -o dazuko.o dazuko_core.o dazuko_transport.o dazuko_linux.o" >> Makefile
+
+	MODULE_SUBDIR=$UTS_RELEASE
+	if [ -z "$MODULE_SUBDIR" ]
+	then
+		MODULE_SUBDIR=`uname -r`
+	fi
+
+	echo "" >> Makefile
+	echo "install: dazuko.o" >> Makefile
+	echo "	@! find /lib/modules/$MODULE_SUBDIR/ -name dazuko.ko | grep dazuko.ko || { echo \"!! a dazuko module is already installed !!\" ; echo \"!! please delete the old version before installing this one !!\" ; false ; }" >> Makefile
+	echo "	mkdir -p /lib/modules/$MODULE_SUBDIR/extra" >> Makefile
+	echo "	cp dazuko.o /lib/modules/$MODULE_SUBDIR/extra" >> Makefile
+	echo "	/sbin/depmod -ae" >> Makefile
+
+	echo "" >> Makefile
+	echo "test: dazuko.o" >> Makefile
+	echo "	@test \`id -u\` -eq 0 || { echo \"!! you must be root !!\" ; false ; }" >> Makefile
+	echo "	/sbin/insmod ./dazuko.o" >> Makefile
+	echo "	/sbin/rmmod dazuko" >> Makefile
+	echo "	@echo \"--> test successful :)\"" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko:" >> Makefile
+	echo "	@echo Just type \\\"make\\\", not \\\"make dazuko\\\"" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko-smp:" >> Makefile
+	echo "	@echo Just type \\\"make\\\", not \\\"make dazuko-smp\\\"" >> Makefile
+
+	echo "" >> Makefile
+	echo "clean:" >> Makefile
+	echo "	\$(RM) *.o" >> Makefile
+}
+
+do_linux24()
+{
+	do_linux
+}
+
+do_linux22()
+{
+	do_linux
+}
+
+do_freebsd()
+{
+	echo "configure: creating Makefile"
+
+	echo -n "" > Makefile
+
+	if [ ${FREEBSD_VERSION} -eq 4 ]
+	then
+		DAZUKO_EXT_C="dazuko_freebsd.c"
+	elif [ ${FREEBSD_VERSION} -eq 5 ]
+	then
+		echo "CFLAGS += -DFREEBSD5_SUPPORT" >> Makefile
+		DAZUKO_EXT_C="dazuko_freebsd5.c"
+	elif [ ${FREEBSD_VERSION} -eq 6 ]
+	then
+		echo "CFLAGS += -DFREEBSD5_SUPPORT" >> Makefile
+		DAZUKO_EXT_C="dazuko_freebsd5.c"
+	elif [ ${FREEBSD_VERSION} -eq 7 ]
+	then
+		echo "CFLAGS += -DFREEBSD7_SUPPORT" >> Makefile
+		DAZUKO_EXT_C="dazuko_freebsd7.c"
+	elif [ ${FREEBSD_VERSION} -eq 8 ]
+	then
+		echo "CFLAGS += -DFREEBSD8_SUPPORT" >> Makefile
+		DAZUKO_EXT_C="dazuko_freebsd8.c"
+	fi
+
+	if [ ${DEBUG} -eq 1 ]
+	then
+		echo "CFLAGS += -DDEBUG" >> Makefile
+	fi
+
+	if [ ${DO_ANON_RESOLVE} -eq 1 ]
+	then
+		echo "CFLAGS += -DANONYMOUS_RESOLVE" >> Makefile
+	fi
+
+	if [ ${ON_OPEN} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_OPEN_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_CLOSE_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_EXEC} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_EXEC_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_UNLINK} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_UNLINK_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_RMDIR} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_RMDIR_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE_MODIFIED} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_CLOSE_MODIFIED_SUPPORT" >> Makefile
+	fi
+
+	if [ ${TRUSTED} -eq 1 ]
+	then
+		echo "CFLAGS += -DTRUSTED_APPLICATION_SUPPORT" >> Makefile
+	fi
+
+	if [ ! -z "$DEVICEMAJOR" ]
+	then
+		echo "CFLAGS += -DDAZUKO_DM=$DEVICEMAJOR" >> Makefile
+	fi
+
+	if [ ! -z "$PPG" ]
+	then
+		echo "CFLAGS += -DNUM_SLOTS=$PPG" >> Makefile
+	fi
+
+	echo "SRCS = dazuko_core.c dazuko_transport.c ${DAZUKO_EXT_C} vnode_if.h" >> Makefile
+	echo "KMOD = dazuko" >> Makefile
+
+	echo "" >> Makefile
+	echo "all: dazuko.ko" >> Makefile
+
+	if [ ${FREEBSD_VERSION} -eq 4 ]
+	then
+		echo "" >> Makefile
+		echo "vnode_if.h: @" >> Makefile
+		echo "	perl @/kern/vnode_if.pl -h @/kern/vnode_if.src" >> Makefile
+	fi
+
+	echo "" >> Makefile
+	echo "test: dazuko.ko" >> Makefile
+	echo "	@test \`id -u\` -eq 0 || { echo \"!! you must be root !!\" ; false ; }" >> Makefile
+	echo "	/sbin/kldload ./dazuko.ko" >> Makefile
+	echo "	/sbin/kldunload dazuko" >> Makefile
+	echo "	@echo \"--> test successful :)\"" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko:" >> Makefile
+	echo "	@echo Just type \\\"make\\\", not \\\"make dazuko\\\"" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko-smp:" >> Makefile
+	echo "	@echo Just type \\\"make\\\", not \\\"make dazuko-smp\\\"" >> Makefile
+
+	echo "" >> Makefile
+	echo ".include <bsd.kmod.mk>" >> Makefile
+}
+
+do_freebsd8()
+{
+	FREEBSD_VERSION=8
+	do_freebsd
+}
+
+do_freebsd7()
+{
+	FREEBSD_VERSION=7
+	do_freebsd
+}
+
+do_freebsd6()
+{
+	FREEBSD_VERSION=6
+	do_freebsd
+}
+
+do_freebsd5()
+{
+	FREEBSD_VERSION=5
+	do_freebsd
+}
+
+do_freebsd4()
+{
+	FREEBSD_VERSION=4
+	do_freebsd
+}
+
+do_dummyos()
+{
+	echo "configure: creating Makefile"
+
+	echo -n "" > Makefile
+
+	echo "CC ?= ${CC}" >> Makefile
+	echo "RM ?= rm -f" >> Makefile
+
+	echo "CFLAGS += -Wall -DDUMMYOS" >> Makefile
+
+	if [ ${DEBUG} -eq 1 ]
+	then
+		echo "CFLAGS += -DDEBUG" >> Makefile
+	fi
+
+	if [ ${DO_ANON_RESOLVE} -eq 1 ]
+	then
+		echo "CFLAGS += -DANONYMOUS_RESOLVE" >> Makefile
+	fi
+
+	if [ ${ON_OPEN} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_OPEN_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_CLOSE_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_EXEC} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_EXEC_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_UNLINK} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_UNLINK_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_RMDIR} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_RMDIR_SUPPORT" >> Makefile
+	fi
+
+	if [ ${ON_CLOSE_MODIFIED} -eq 1 ]
+	then
+		echo "CFLAGS += -DON_CLOSE_MODIFIED_SUPPORT" >> Makefile
+	fi
+
+	if [ ${TRUSTED} -eq 1 ]
+	then
+		echo "CFLAGS += -DTRUSTED_APPLICATION_SUPPORT" >> Makefile
+	fi
+
+	if [ ! -z "$PPG" ]
+	then
+		echo "CFLAGS += -DNUM_SLOTS=$PPG" >> Makefile
+	fi
+
+
+	echo "LDFLAGS += -pthread" >> Makefile
+
+	echo "" >> Makefile
+	echo "dazuko.bin: dazuko_core.o dazuko_transport.o dazuko_dummyos.o" >> Makefile
+	echo "	\$(CC) \$(CFLAGS) \$(LDFLAGS) dazuko_core.o dazuko_transport.o dazuko_dummyos.o -o dazuko.bin" >> Makefile
+
+	for item in dazuko_core dazuko_transport dazuko_dummyos
+	do
+		echo "" >> Makefile
+		echo "$item.o: $item.c $item.h" >> Makefile
+		echo "	\$(CC) \$(CFLAGS) -c $item.c" >> Makefile
+	done
+
+	echo "" >> Makefile
+	echo "clean:" >> Makefile
+	echo "	\$(RM) *.o dazuko.bin" >> Makefile
+}
+
+do_summary()
+{
+	echo ""
+	echo "$0 successful"
+	echo ""
+	echo "======================="
+	echo " Configuration summary"
+	echo "======================="
+	echo ""
+
+	if [ ${WITH_MODULE} -eq 0 ]
+	then
+		echo "build module = no"
+	else
+		echo -n "module events ="
+		if [ ${ON_OPEN} -eq 1 ]
+		then
+			echo -n " ON_OPEN"
+		fi
+
+		if [ ${ON_CLOSE} -eq 1 ]
+		then
+			echo -n " ON_CLOSE"
+		fi
+
+		if [ ${ON_EXEC} -eq 1 ]
+		then
+			echo -n " ON_EXEC"
+		fi
+
+		if [ ${ON_UNLINK} -eq 1 ]
+		then
+			echo -n " ON_UNLINK"
+		fi
+
+		if [ ${ON_RMDIR} -eq 1 ]
+		then
+			echo -n " ON_RMDIR"
+		fi
+
+		if [ ${ON_CLOSE_MODIFIED} -eq 1 ]
+		then
+			echo -n " ON_CLOSE_MODIFIED"
+		fi
+
+		echo ""
+
+		echo -n "devfs support = "
+		if [ ${DEVFS} -eq 1 ]
+		then
+			echo "yes"
+		else
+			echo "no"
+
+			if [ ! -z "$DEVICEMAJOR" ]
+			then
+				echo "device major = $DEVICEMAJOR"
+			fi
+		fi
+
+		if [ "x${OS}" = "xLinux" ]
+		then
+			echo -n "rsbac support = "
+			if [ ${RSBAC} -eq 1 ]
+			then
+				echo "yes"
+			else
+				echo "no"
+			fi
+
+			if echo $LINUX_VERSION | grep -q ^2\.6\.
+			then
+				if [ $LINUX26_USE_SYSCALLS -eq 0 ]
+				then
+					echo -n "stacking support = "
+					if [ ${LSM_STACKING} -eq 1 ]
+					then
+						echo "yes"
+					else
+						echo "no"
+					fi
+				else
+					echo "hooking via syscalls = yes"
+
+					echo -n "local __d_path() = "
+					if [ ${LOCAL_DPATH} -eq 1 ]
+					then
+						echo -n "yes"
+
+						if [ ${CONFIG_SMP} -ne 0 ]
+						then
+							echo " (WARNING: dangerous for SMP kernels, see README.linux26)"
+						else
+							echo ""
+						fi
+					else
+						echo -n "no"
+
+						if [ $LINUX26_USE_CHROOT -ne 0 ]
+						then
+							echo " (using chroot events, see README.linux26)"
+						else
+							echo ""
+						fi
+					fi
+				fi
+			fi
+		fi
+
+		echo -n "path resolution = "
+		if [ ${DO_ANON_RESOLVE} -eq 1 ]
+		then
+			echo "accessing process context"
+		else
+			echo "registered daemon context"
+		fi
+
+		echo -n "module debug = "
+		if [ ${DEBUG} -eq 1 ]
+		then
+			echo "yes"
+		else
+			echo "no"
+		fi
+	fi
+
+	echo -n "library 1.x compatibility = "
+	if [ ${COMPAT1} -eq 1 ]
+	then
+		echo "yes"
+	else
+		echo "no"
+	fi
+
+	echo ""
+
+	if [ ${RSBAC} -eq 1 ]
+	then
+		echo ""
+		echo "Note: For RSBAC you should copy the contents of this directory to:"
+		echo "      ${LINUX_SRC}/rsbac/adf/daz"
+		echo "      and recompile the kernel. Also make sure that the DAZ module"
+		echo "      has been enabled in the kernel configuration."
+		echo ""
+	fi
+}
+
+inc_library()
+{
+	WITH_LIBRARY=`expr $WITH_LIBRARY + 1`
+}
+
+dec_library()
+{
+	if [ $WITH_LIBRARY -gt 0 ]
+	then
+		WITH_LIBRARY=`expr $WITH_LIBRARY - 1`
+	fi
+}
+
+#main()
+ON_OPEN=1
+ON_CLOSE=1
+ON_EXEC=1
+ON_UNLINK=0
+ON_RMDIR=0
+ON_CLOSE_MODIFIED=0
+COMPAT1=1
+TRUSTED=1
+DEVFS=0
+RSBAC=0
+DEBUG=0
+WITH_MODULE=1
+FORCE_RSBAC=2
+WITH_LIBRARY=2
+WITH_EXAMPLE_C=1
+WITH_EXAMPLE_JAVA=0
+WITH_EXAMPLE_PERL=0
+WITH_EXAMPLE_PYTHON=0
+LINUX_USE_PARENT=0
+LINUX_USE_CONFIG_H=1
+LINUX_USE_GENERATED_AUTOCONF_H=1
+LINUX_USE_GENERATED_UTSRELEASE_H=1
+LINUX26_USE_SUSPEND=0
+LINUX26_USE_FREEZER=0
+LINUX26_USE_SYSCALLS_H=0
+LINUX26_USE_CLASS=0
+LINUX26_USE_NDPATH=0
+LINUX26_USE_CHROOT=0
+LINUX26_USE_SYSCALLS=0
+PERFORM_SCT_CHECK=1
+LINUX26_SYSCALLTABLE_READONLY=0
+LINUX26_SYSCALL_CFLAGS=""
+WITH_LINUX_DEP=0
+NO_CAPABILITIES=0
+SMP=0
+HIDDEN_SCT=0
+DUMMYOS=0
+LSM_STACKING=1
+LINUX26_USE_REDIRFS=0
+REDIRFS_DIR="`pwd`/../redirfs/"
+LOCAL_DPATH=2
+DO_ANON_RESOLVE=2
+LINUX_SRC=""
+LINUX_OBJ=""
+DEVICEMAJOR=""
+SYSTEM=""
+MAPFILE=""
+PPG=""
+LINUX_VERSION=0
+FREEBSD_VERSION=0
+UNAME=`uname`
+UNAME_R=`uname -r`
+
+for option in $@
+do
+	case ${option} in
+		--disable-event-open)
+			ON_OPEN=0
+			;;
+		--enable-event-open)
+			ON_OPEN=1
+			;;
+		--disable-event-close)
+			ON_CLOSE=0
+			;;
+		--enable-event-close)
+			ON_CLOSE=1
+			;;
+		--disable-event-exec)
+			ON_EXEC=0
+			;;
+		--enable-event-exec)
+			ON_EXEC=1
+			;;
+		--disable-event-close-modified)
+			ON_CLOSE_MODIFIED=0
+			;;
+		--enable-event-unlink)
+			ON_UNLINK=1
+			;;
+		--enable-event-rmdir)
+			ON_RMDIR=1
+			;;
+		--enable-event-close-modified)
+			ON_CLOSE_MODIFIED=1
+			;;
+		--disable-debug)
+			DEBUG=0
+			;;
+		--enable-debug)
+			DEBUG=1
+			;;
+		--enable-trusted)
+			TRUSTED=1
+			;;
+		--disable-trusted)
+			TRUSTED=0
+			;;
+		--enable-compat1)
+			COMPAT1=1
+			;;
+		--disable-compat1)
+			COMPAT1=0
+			;;
+		--enable-compat12)
+			COMPAT1=1
+			;;
+		--disable-compat12)
+			COMPAT1=0
+			;;
+		--enable-stacking)
+			LSM_STACKING=1
+			LINUX26_USE_SYSCALLS=0
+			;;
+		--disable-stacking)
+			LSM_STACKING=0
+			;;
+		--enable-syscalls)
+			LINUX26_USE_SYSCALLS=1
+			LSM_STACKING=0
+			;;
+		--disable-syscalls)
+			LINUX26_USE_SYSCALLS=0
+			;;
+		--enable-redirfs)
+			LINUX26_USE_REDIRFS=1
+			LSM_STACKING=0
+			;;
+		--disable-redirfs)
+			LINUX26_USE_REDIRFS=0
+			;;
+		--redirfsdir=*)
+			REDIRFS_DIR=`echo $option | sed -e s/^--redirfsdir=//`
+			if [ "x$REDIRFS_DIR" != "x/" ]
+			then
+				REDIRFS_DIR=`echo $REDIRFS_DIR | sed -e s/\\\/$//`
+			fi
+			# implies --enable-redirfs
+			LINUX26_USE_REDIRFS=1
+			LSM_STACKING=0
+			;;
+		--sct-nocheck)
+			PERFORM_SCT_CHECK=0
+			;;
+		--sct-readonly)
+			LINUX26_SYSCALLTABLE_READONLY=1
+			;;
+		--enable-rsbac)
+			FORCE_RSBAC=1
+			;;
+		--disable-rsbac)
+			FORCE_RSBAC=0
+			;;
+		--enable-chroot-support)
+			LINUX26_USE_CHROOT=0
+			;;
+		--disable-chroot-support)
+			LINUX26_USE_CHROOT=1
+			LOCAL_DPATH=0
+			;;
+		--enable-local-dpath)
+			LOCAL_DPATH=1
+			;;
+		--disable-local-dpath)
+			LOCAL_DPATH=0
+			;;
+		--enable-anon-resolve)
+			DO_ANON_RESOLVE=1
+			;;
+		--disable-anon-resolve)
+			DO_ANON_RESOLVE=0
+			;;
+		--with-module)
+			WITH_MODULE=1
+			;;
+		--without-module)
+			WITH_MODULE=0
+			;;
+		--with-library)
+			inc_library
+			;;
+		--without-library)
+			dec_library
+			;;
+		--with-example-c)
+			WITH_EXAMPLE_C=1
+			inc_library
+			;;
+		--without-example-c)
+			WITH_EXAMPLE_C=0
+			dec_library
+			;;
+		--with-example-java)
+			WITH_EXAMPLE_JAVA=1
+			inc_library
+			;;
+		--without-example-java)
+			WITH_EXAMPLE_JAVA=0
+			dec_library
+			;;
+		--with-example-perl)
+			WITH_EXAMPLE_PERL=1
+			inc_library
+			;;
+		--without-example-perl)
+			WITH_EXAMPLE_PERL=0
+			dec_library
+			;;
+		--with-example-python)
+			WITH_EXAMPLE_PYTHON=1
+			inc_library
+			;;
+		--without-example-python)
+			WITH_EXAMPLE_PYTHON=0
+			dec_library
+			;;
+		--with-dep)
+			WITH_LINUX_DEP=1
+			;;
+		--without-dep)
+			WITH_LINUX_DEP=0
+			;;
+		--kernelsrcdir=*)
+			LINUX_SRC=`echo $option | sed -e s/^--kernelsrcdir=//`
+			if [ "x$LINUX_SRC" != "x/" ]
+			then
+				LINUX_SRC=`echo $LINUX_SRC | sed -e s/\\\/$//`
+			fi
+			;;
+		--kernelobjdir=*)
+			LINUX_OBJ=`echo $option | sed -e s/^--kernelobjdir=//`
+			if [ "x$LINUX_OBJ" != "x/" ]
+			then
+				LINUX_OBJ=`echo $LINUX_OBJ | sed -e s/\\\/$//`
+			fi
+			;;
+		--devicemajor=*)
+			DEVICEMAJOR=`echo $option | sed -e s/^--devicemajor=//`
+			if echo $DEVICEMAJOR | grep -q [^0-9]
+			then
+				echo "configure: error: device major must be a number"
+				exit 1
+			fi
+			;;
+		--system=*)
+			SYSTEM=`echo $option | sed -e s/^--system=//`
+			;;
+		--procs-per-group=*)
+			PPG=`echo $option | sed -e s/^--procs-per-group=//`
+			;;
+		--mapfile=*)
+			MAPFILE=`echo $option | sed -e s/^--mapfile=//`
+			;;
+		--help|-h)
+			print_help
+			exit 0
+			;;
+		*)
+			echo "configure: error: unrecognized option: ${option}"
+			echo "Try \`./configure --help' for more information."
+			exit 1
+			;;
+	esac
+done
+
+if [ ! -z "$SYSTEM" ]
+then
+	case $SYSTEM in
+		linux22)
+			UNAME="Linux"
+			UNAME_R="2.2.x"
+			LINUX_VERSION="$UNAME_R"
+			;;
+		linux24)
+			UNAME="Linux"
+			UNAME_R="2.4.x"
+			LINUX_VERSION="$UNAME_R"
+			;;
+		linux26)
+			UNAME="Linux"
+			UNAME_R="2.6.x"
+			LINUX_VERSION="$UNAME_R"
+			;;
+		freebsd4)
+			UNAME="FreeBSD"
+			UNAME_R="4.x"
+			;;
+		freebsd5)
+			UNAME="FreeBSD"
+			UNAME_R="5.x"
+			;;
+		freebsd6)
+			UNAME="FreeBSD"
+			UNAME_R="6.x"
+			;;
+		freebsd7)
+			UNAME="FreeBSD"
+			UNAME_R="7.x"
+			;;
+		freebsd8)
+			UNAME="FreeBSD"
+			UNAME_R="8.x"
+			;;
+		dummyos)
+			UNAME="DummyOS"
+			UNAME_R="0.x"
+			;;
+		*)
+			echo "configure: error: unrecognized system: $SYSTEM"
+			echo "Try \`./configure --help' for more information."
+			exit 1
+			;;
+	esac
+fi
+
+OS="$UNAME"
+
+echo "checking host system type... ${OS}"
+
+# check for the make(1) utility to be available
+echo -n "checking for make utility... "
+MKF=Makefile
+echo "# autogenerated, do NOT edit" > ${MKF}
+echo "all:" >> ${MKF}
+echo "	true" >> ${MKF}
+if [ -z "${MAKE}" ]
+then
+	# try to find a usable make(1) tool
+	for MK in make gmake
+	do
+		${MK} > /dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			MAKE=${MK}
+			break
+		fi
+	done
+
+	if [ -z "${MAKE}" ]
+	then
+		echo "none found"
+		echo "error: no make utility found on this system"
+	fi
+else
+	# check the passed in ${MAKE} spec
+	${MAKE} > /dev/null 2>&1
+	if [ $? -ne 0 ]
+	then
+		echo "invalid"
+		echo "error: pre-defined make utility (${MAKE}) is invalid"
+		MAKE=""
+	fi
+fi
+rm ${MKF}
+if [ -z "${MAKE}" ]
+then
+	exit 1
+fi
+echo "ok (${MAKE})"
+
+# check for a C compiler to be available
+echo -n "checking for C compiler... "
+if [ -z "${CC}" ]
+then
+	# try to find a compiler we can use
+	#
+	# I'm not sure how portable any of the compiler options is
+	# (get version info, get config, etc) -- so we try to use
+	# the preprocessor with a "short" source code :)
+	for C in cc gcc
+	do
+		${C} -E /dev/null > /dev/null 2>&1
+		if [ $? -eq 0 ]
+		then
+			CC=${C}
+			break
+		fi
+	done
+
+	if [ -z "${CC}" ]
+	then
+		echo "none found"
+		echo "error: no C compiler found on this system"
+	fi
+else
+	# check the passed in ${CC} spec
+	${CC} -E /dev/null > /dev/null 2>&1
+	if [ $? -ne 0 ]
+	then
+		echo "invalid"
+		echo "error: pre-defined C compiler (${CC}) is invalid"
+		CC=""
+	fi
+fi
+if [ -z "${CC}" ]
+then
+	exit 1
+fi
+echo "ok (${CC})"
+
+case ${OS} in
+	Linux)
+		if [ $WITH_MODULE -eq 1 ]
+		then
+			if [ -z "${LINUX_SRC}" -a -z "${LINUX_OBJ}" ]
+			then
+				# no sources specified, auto search
+
+				LINUX_CHECK_SRC="/lib/modules/$UNAME_R/source"
+				linux_check_srcdir
+
+				LINUX_CHECK_OBJ="/lib/modules/$UNAME_R/build"
+				linux_check_objdir
+			fi
+
+			if [ -z "${LINUX_OBJ}" -a ! -z "${LINUX_SRC}" ]
+			then
+				# no obj, but we have src,
+				# try building obj from src
+
+				LINUX_CHECK_OBJ="$LINUX_SRC"
+				linux_check_objdir
+
+				LINUX_CHECK_OBJ="`echo $LINUX_SRC | sed -e s/source$/build/`"
+				linux_check_objdir
+			fi
+
+			if [ -z "${LINUX_SRC}" -a ! -z "${LINUX_OBJ}" ]
+			then
+				# no src, but we have obj,
+				# try building src from obj
+
+				LINUX_CHECK_SRC="$LINUX_OBJ"
+				linux_check_srcdir
+
+				LINUX_CHECK_SRC="`echo $LINUX_OBJ | sed -e s/build$/source/`"
+				linux_check_srcdir
+			fi
+
+			if [ -z "${LINUX_OBJ}" ]
+			then
+				# last try with the old stuff
+
+				LINUX_CHECK_OBJ="/usr/src/linux"
+				linux_check_objdir
+			fi
+
+			if [ -z "${LINUX_SRC}" ]
+			then
+				# last try with the old stuff
+
+				LINUX_CHECK_SRC="/usr/src/linux"
+				linux_check_srcdir
+			fi
+
+			if [ -z "${LINUX_SRC}" ]
+			then
+				echo "error: no kernel source files found"
+				exit 1
+			fi
+
+			if [ -z "${LINUX_OBJ}" ]
+			then
+				echo "error: no kernel build source files found"
+				echo "(perhaps kernel source in $LINUX_SRC not configured?)"
+				exit 1
+			fi
+
+			echo -n "acquiring Linux kernel code configuration... "
+			echo "CC ?= ${CC}" > Makefile
+
+			TEMPNAME="$LINUX_OBJ/include"
+			echo "CFLAGS = -Wall -D__KERNEL__ -DMODULE -I$TEMPNAME" >> Makefile
+
+			if [ -f "$TEMPNAME/linux/config.h" ]
+			then
+				echo "CFLAGS += -DUSE_CONFIG_H" >> Makefile
+			else
+				LINUX_USE_CONFIG_H=0
+			fi
+			if [ -f "$TEMPNAME/generated/autoconf.h" ]
+			then
+				echo "CFLAGS += -DUSE_GENERATED_AUTOCONF_H" >> Makefile
+			else
+				LINUX_USE_GENERATED_AUTOCONF_H=0
+			fi
+			if [ -f "$TEMPNAME/generated/utsrelease.h" ]
+			then
+				echo "CFLAGS += -DUSE_GENERATED_UTSRELEASE_H" >> Makefile
+			else
+				LINUX_USE_GENERATED_UTSRELEASE_H=0
+			fi
+			if [ -f "$TEMPNAME/linux/utsrelease.h" ]
+			then
+				echo "CFLAGS += -DUSE_UTSRELEASE_H" >> Makefile
+			fi
+
+			echo "" >> Makefile
+			echo "linux_conf: linux_conf.c" >> Makefile
+			echo "	\$(CC) \$(CFLAGS) linux_conf.c -o linux_conf > linux_conf_make.out 2>&1" >> Makefile
+			rm -f linux_conf
+			$MAKE linux_conf > /dev/null 2>&1
+			if [ ! -x linux_conf ]
+			then
+				echo "error"
+				echo "error: unable to compile linux_conf utility"
+				echo "please see \`linux_conf_make.out' for details"
+				exit 1
+			fi
+			echo "ok"
+			rm -f Makefile linux_conf_make.out
+
+			./linux_conf > linux.config
+			rm -f linux_conf
+
+			. ./linux.config
+			rm -f linux.config
+
+			echo -n "checking if Linux is RSBAC patched... "
+
+			if [ $FORCE_RSBAC -eq 1 ]
+			then
+				if [ $CONFIG_RSBAC -ne 0 ]
+				then
+					echo "yes"
+				else
+					echo "no (using RSBAC API anyway)"
+				fi
+				RSBAC=1
+
+				SYSTEM="rsbac"
+			else
+				if [ $CONFIG_RSBAC -ne 0 ]
+				then
+					echo "yes (use --enable-rsbac to activate RSBAC API)"
+				else
+					echo "no"
+				fi
+			fi
+
+			echo -n "checking if devfs is enabled... "
+			if [ $CONFIG_DEVFS_FS -eq 0 ]
+			then
+				DEVFS=0
+				echo "no"
+			else
+				DEVFS=1
+				echo "yes"
+			fi
+
+			UNAME_R="$LINUX_VERSION"
+		fi
+		;;
+	FreeBSD)
+		COMPAT1=0
+		SMP=0
+		;;
+	DummyOS)
+		COMPAT1=0
+		DUMMYOS=1
+		OS="$UNAME"
+		;;
+	*)
+		echo "error: unknown host system type"
+		;;
+esac
+
+if [ -z "$SYSTEM" ]
+then
+	if echo $UNAME | grep -qi linux
+	then
+		if echo $UNAME_R | grep -qi ^2\.6\.
+		then
+			SYSTEM="linux26"
+		elif echo $UNAME_R | grep -qi ^2\.4\.
+		then
+			SYSTEM="linux24"
+		elif echo $UNAME_R | grep -qi ^2\.2\.
+		then
+			SYSTEM="linux22"
+		fi
+	elif echo $UNAME | grep -qi freebsd
+	then
+		if echo $UNAME_R | grep -qi ^4\.
+		then
+			SYSTEM="freebsd4"
+		elif echo $UNAME_R | grep -qi ^5\.
+		then
+			SYSTEM="freebsd5"
+		elif echo $UNAME_R | grep -qi ^6\.
+		then
+			SYSTEM="freebsd6"
+		elif echo $UNAME_R | grep -qi ^7\.
+		then
+			SYSTEM="freebsd7"
+		elif echo $UNAME_R | grep -qi ^8\.
+		then
+			SYSTEM="freebsd8"
+		else
+			# default to FreeBSD 8
+			SYSTEM="freebsd8"
+		fi
+	fi
+fi
+
+if [ ${DO_ANON_RESOLVE} -eq 2 ]
+then
+	# pick a default when nothing was specified
+	case "${SYSTEM}" in
+		linux26)
+			DO_ANON_RESOLVE=0
+			;;
+		*)
+			DO_ANON_RESOLVE=1
+			;;
+	esac
+fi
+
+if [ ! -z "$SYSTEM" -a $WITH_MODULE -eq 1 ]
+then
+	echo "discovered host system... $UNAME ($UNAME_R)"
+	do_$SYSTEM
+fi
+
+if [ $WITH_LIBRARY -ge 1 ]
+then
+	if [ $DUMMYOS -ne 0 ]
+	then
+		LIB_EXT_TYPE="dazukoio_dummyos"
+	else
+		LIB_EXT_TYPE="dazukoio_unix"
+	fi
+
+	case ${OS} in
+		FreeBSD)
+			do_lib_freebsd
+			;;
+		*)
+			do_lib_generic
+			;;
+	esac
+fi
+
+if [ $WITH_EXAMPLE_C -eq 1 ]
+then
+	do_example_c_generic
+fi
+
+if [ $WITH_EXAMPLE_JAVA -eq 1 ]
+then
+	do_example_java_generic
+fi
+
+if [ $WITH_EXAMPLE_PERL -eq 1 ]
+then
+	do_example_perl_generic
+fi
+
+if [ $WITH_EXAMPLE_PYTHON -eq 1 ]
+then
+	do_example_python_generic
+fi
+
+do_summary
+

@@ -1,0 +1,101 @@
+Introduction
+============
+
+This is a Lua binding for Dazuko.  See http://www.lua.org for
+details on the Lua language.  "Lua is an extension programming
+language designed to support general procedural programming with
+data description facilities.  It also offers good support for
+object-oriented programming, functional programming, and
+data-driven programming. Lua is intended to be used as a
+powerful, light-weight configuration language for any program
+that needs one. Lua is implemented as a library, written in clean
+C (that is, in the common subset of ANSI C and C++)."  Lua was
+designed for easy integration into other applications and gets
+heavily used in embedded systems and for scripting purposes in
+editors, statistics or database software, game engines, and the
+like.
+
+This language binding was released under the BSD license.  The
+original version was created by Gerhard Sittig.
+
+This version of the Lua binding requires Lua 5.1.  Should you
+need a version which is compatible with Lua 5.0 or if you want to
+look at the first implementation of this binding, have a look at
+an older Dazuko distribution (versions up to 2.3.2).
+
+Preparation
+===========
+
+You need the dazukoio.h header file and the libdazuko.a library
+to build this extension.  If you have not done so before, run the
+following command:
+
+$ make -C ../library
+
+Since lua was designed for embedding into other applications it
+does not provide the "makefile makers" or "package management"
+other scripting languages have.  So you may have to tweak the
+Makefile a little to fit your needs.
+
+Building the extension
+======================
+
+The libdazuko.c source file exports the Dazuko C library's
+routines into Lua land while providing an object oriented API
+which conforms to the Lua style.  Build it with this command:
+
+$ make dazuko.so
+
+Dazuko enabled applications need to require() this module.
+
+Testing the extension
+=====================
+
+The example.lua script demonstrates how to interface with Dazuko
+by means of the above module.  It receives a configuration script
+name and a table name within that specified script (the "bundle")
+to setup all the parameters.  The script will be stopped by
+hitting CTRL-C.  Start it like this:
+
+# lua example.lua config.lua cfg1
+
+Note that the script wants to register with Dazuko and needs
+privileges to do so.
+
+Embedding a lua access handler
+==============================
+
+The above approach is the classical "extension" for a programming
+language:  provide a library's functionality by exporting its
+routines into the other language's namespace, making the
+library's functionality accessible with the natural means of the
+other programming language.
+
+A different approach was taken in the example.c source:  This C
+program embeds a lua script (for example the same config.lua file
+which was used to configure the Lua application above).  The
+configuration as well as the access handler can be of arbitrary
+complexity (set or calculate values, access local or remote
+sources of information, handle the access details in any way one
+could think of) without any need to further adjust the C code.
+
+The example C application is built with:
+
+$ make example
+
+Invoke this example with the name of the script file to read and
+the name of the configuration bundle to use:
+
+# ./example config.lua cfg1
+# ./example config.lua cfg2
+
+TODO
+====
+
+There's rather little documentation.  But there is no real lack
+since this extension is just a thin wrapper around the C library
+which is well documented on the www.dazuko.org homepage.  The
+only exception is the getaccess() routine which gets and returns
+an access (after calling the handler) so the application can not
+do too much wrong. :)  It cannot be stressed enough that accesses
+ALWAYS SHOULD be returned to Dazuko -- even in read only mode.

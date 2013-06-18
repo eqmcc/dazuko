@@ -1,0 +1,6 @@
+The Dazuko kernel module for Linux is under the GNU General Public License.
+Please see LICENSE.GPL for copying information.
+
+All other software AND the kernel module for platforms other than Linux are
+provided under a BSD License. Please see LICENSE.BSD for copying information.
+

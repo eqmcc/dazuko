@@ -1,0 +1,708 @@
+
+Dazuko CHANGELOG
+================
+
+2.3.9
+- integrate patch from Jaroslav Suchanek for FreeBSD 8 support
+
+
+2.3.9-pre1
+- add support for buidling on Linux 2.6.33 (with RedirFS)
+
+
+2.3.8
+- add README.redirfs for Redirfs-based installation
+- configure script now copies Redirfs module symbols
+- support new uid API for Linux
+
+2.3.7
+- integrate patch from Frantisek Hrbata for FreeBSD 7 support
+
+
+2.3.6
+- improve LSM API detection
+- integrate patch from Frantisek Hrbata for RedirFS 0.6 support
+
+
+2.3.6-pre2
+- relocated most memory allocation outside of critical sections
+- fix incorrect locking used with trusted applications
+
+
+2.3.6-pre1
+- added support for Linux 2.6.26 device API
+- use DEVICE_NAME macro instead of explicit string
+- change to support RedirFS 0.3 API (API <0.3 no longer supported)
+- add support for Linux 2.6.25 path structure
+- switch back to GFP_KERNEL for Linux 2.6 memory allocation
+
+
+2.3.5
+- added "--redirfsdir" option to specify redirfs source directory
+
+
+2.3.5-pre1
+- registered context path resolution now only for Linux 2.6
+- added "--[en|dis]able-anon-resolve" option to override defaults (file #15031)
+- now using "--without-dep" as default
+- added "--enable-redirfs" option to build Dazuko as RedirFS filter
+- fix inclusion of unneeded __d_path() declaration in some configurations
+
+
+2.3.4
+- remove error checking for device unregistration (Linux 2.6+syscall/RSBAC)
+
+
+2.3.4-pre3
+- added "--procs-per-group" option for maximum allowed registered processes
+- use -fPIC when compiling DazukoIO library
+- check if a dazuko module already exists when running "make install"
+- update perl binding (fix for 64-bit systems)
+- add support for Linux 2.6.21 (SUSE) LSM API
+
+
+2.3.4-pre2
+- added support for Linux 2.6.23-rc4 LSM API (patch #13828)
+
+
+2.3.4-pre1
+- added "--sct-nocheck" option to disable syscall table checks
+- removed __d_path(), root, rootmnt dependencies for Linux 2.6 (LSM)
+- added support for Linux 2.6.23-rc3 LSM API (patch #13661)
+- minor code readability improvements (patch #13783)
+
+
+2.3.3
+- added support for Linux 2.6.21 LSM API
+
+
+2.3.3-pre3
+- fix some issues detecting LSM version for 2.6.19 and 2.6.20
+- include new Lua binding
+
+
+2.3.3-pre2
+- fix configure summary output for Linux/RSBAC
+- fallback to FreeBSD 6 if FreeBSD version unknown
+- added support for Linux 2.6.20 LSM API
+- resolved namespace issue with "struct path"
+
+
+3.0.0-birthday (experimental-pre1)
+- complete new directory layout
+- use fistgen 0.2 for Linux 2.6 (DazukoFS)
+- use nullfs for FreeBSD 6 (DazukoFS)
+- remove syscall hooking support
+- remove Linux 2.6 LSM support
+
+
+2.3.3-pre1
+- fix header issues on Linux 2.2
+- fix header issues on Linux 2.6
+- fix compiler issues on Linux 2.6.0
+- add official support for suspend2 on Linux 2.6
+- add extra syscall table checks on Linux 2.6 (patch #5558)
+- cleanup thread handling for TAF on Linux 2.6 (patch #5557)
+- fix DazukoIO X/Y-bit compatibility for trusted processes (patch #5559)
+- minor improvements to C example programs
+- added support for Linux 2.6.19 LSM API
+- minor optimization to linux_lsm_conf script
+- remove unnecessary global variables from DazukoIO
+- restructured DazukoIO protocol fallback code
+
+
+2.3.2
+- fix compiler warning on Linux 2.2
+
+
+2.3.2-pre2
+- fix name-cache leak for Linux 2.2, 2.4, and 2.6+syscall (patch #5552)
+- fix memory leak when removing trusted applications (patch #5552)
+- fix Linux 2.6 LSM stacking as a secondary module
+- fix overly conservative snprintf() calls
+
+
+2.3.2-pre1
+- fixed syscall support for Linux 2.6 with UTRACE (patch #5398)
+
+
+2.3.1
+- improved detection of Linux source and object directories
+- wrapped devfs in ifdef's for Linux 2.6 w/ syscalls
+- fixed error in resetting read-only flag Linux 2.6 w/ syscalls
+- added extra NULL check for filenames in core (allow NULL)
+- added "init module" event patch from F-Secure
+- added --without-dep option to avoid building dependencies
+
+
+2.3.1-pre3
+- added --kernelobjdir configure option for kernel build source
+- intensified configure's search for kernel source
+
+
+2.3.1-pre2
+- fix error in determining when ON_EXEC may be used
+
+
+2.3.1-pre1
+- merged all improvements from 2.2.2
+- fixed a problem detecting linux configuration
+- Linux 2.6 read-only sct's require --sct-readonly with configure
+- added checks when ON_EXEC may be used
+
+
+2.2.2
+- 2.2.2-pre2 unchanged
+
+
+2.2.2-pre2
+- use Linux headers utsrelease.h/vermagic.h if available
+- RSBAC now only used if --enable-rsbac specified
+- fixed Linux 2.6.18 compile problems with no devfs
+- added support for Linux 2.6.18-rc2 LSM API
+
+
+2.3.0
+- added sys_call hooking under Linux 2.6 (--enable-syscalls)
+
+
+2.2.2-pre1
+- separate Linux LSM and device API detection
+- fix kernel version detection (now based on UTS_RELEASE)
+- fix compile errors under FreeBSD
+- fix possible formatting issues for error messages
+- fix minor memory leak in a rare error situation
+
+
+2.2.1
+- added simple make(1) filter to capture Linux 2.6 kernel version
+
+
+2.2.1-pre2
+- fixed "make install" when building for non-running Linux kernels
+
+
+2.2.1-pre1
+- add Linux 2.6 build tools as Makefile dependencies
+- fix issue with configure and the dash shell
+- renamed dazuko_get_filename_length() to dazuko_strlen()
+- added support for Linux 2.6.17-rc2 LSM API
+- exported dazuko_active() for extensions
+- exported dazuko_strtoul() for extensions
+- exported dazuko_strlen() for extensions
+- exported dazuko_strdup() for extensions
+- fixed small memory leak when handling setting access mask
+- trust-request-function now acts like other handle-functions (id_copy)
+
+
+2.2.0
+- allow Linux 2.6 LSM stacking on Dazuko's hook (inode_permission)
+- remove warning for unexpected slot-state resets
+
+
+2.2.0-birthday (pre1)
+- fixed a deadlock situation with wait queues (in core)
+- localized wait queues
+- removed unnecessary queue wake's
+
+
+2.1.1
+- fixed check for event cache index values
+- fixed setting file mode in DazukoIO
+- added configure option to force RSBAC support
+- added support for Linux 2.6.16-rc1 LSM API
+
+
+2.1.1-pre3
+- added chroot workaround for Linux 2.6 (SMP, no __d_path) (patch #4602)
+- chroot workaround only available with --disable-chroot-support
+- added support for FreeBSD 6
+- added support for Linux 2.6.15 device API
+- added support for Linux 2.6.15 LSM API
+
+
+2.1.1-pre2
+- added "make install" for Linux 2.2/2.4
+- added support for Linux 2.6.14 LSM API
+
+
+2.1.1-pre1
+- fixed support for suspend2 (http://www.suspend2.net)
+- added support for Mandrake 10.0's version of LSM API
+- replaced "struct+trailing string" allocation
+- corrected return value for strtoul to unsigned
+
+
+2.1.0
+- improved "make install" for Linux 2.6
+- added OO and threading support to Python binding (patch #3605)
+- fixed DummyOS support for REQSTREAM
+
+
+2.1.0-pre9
+- fixed problem with suspend for Linux 2.6 kernels < 2.6.13
+- changed Linux 2.6 messages to KERN_INFO
+
+
+2.1.0-pre8
+- added configure checks for make utility and C compiler
+- added support for suspend1 (and the upcoming suspend2) for Linux 2.6
+- added support for modified device API for Linux 2.6.13
+- added "modprobe commoncap" to "make test" for Linux 2.6 when needed
+- no longer hook capability functions if commoncap not needed (Linux 2.6)
+- fixed bug that prevented stacked modules from being called (Linux 2.6)
+- updated perl binding for 2.1.0 API
+- updated python binding for 2.1.0 API
+- updated ruby binding for 2.1.0 API
+- updated lua binding for 2.1.0 API
+- updated lua license
+
+
+2.1.0-pre7
+- fixed a problem recognizing capabilities module (Linux 2.6)
+- added safer stacking support for Linux 2.6 without capabilities
+
+
+2.1.0-pre6
+- added newline to version stamp
+- added DazukoIO Version API
+- use version API in C single-threaded example
+- fixed problem with fopen("") for Linux 2.2/2.4
+- fixed support for RedHat 9 Linux 2.4 kernels
+- allow stacking for Linux 2.6 kernels without capabilities
+
+
+2.1.0-pre5
+- added separate version header (using new version scheme)
+- added version stamps to userland and kernel binaries
+- fixed building using directories with spaces (Linux 2.6)
+- added TAF support to Linux/RSBAC, Linux 2.6, FreeBSD 4/5
+- TAF can now only span to children, no longer to parents
+- renamed TAF "relative" to "child" (NOTE: this makes 2.1.0-pre4 incompatible!)
+- fixed a bug in communication fallback logic
+
+
+2.1.0-pre4
+- added REQSTREAM to device protocol (X/Y-bit compatibility)
+- moved all device handling into core (RA/ra handling)
+- ported pre-open event support for non-existant files to Linux 2.2/2.4
+- added suspicous process checking for TAF to Linux 2.2/2.4
+- added TRUST_RELATIVES support in TAF for Linux 2.2/2.4
+- EXEC from daemons no longer generates event (for that group)
+- added dazukoRemoveTrusted(token)
+- added support for FiST to Linux 2.6 (currently deactivated)
+- fixed RDONLY/RDWR event flags in Linux 2.6
+- added "setid" command to DummyOS for TAF debugging
+- abstracted request alloc/free in DazukoIO
+- removed accidental libc calls in kernel
+- kernel now sends version number on registration
+
+
+2.1.0-pre3
+- merged all improvements from 2.0.6
+- added trusted application framework (TAF)
+- TAF supported by default (disable with --disable-trusted)
+- changed all references of "compat12" to "compat1"
+- renamed "xp" layer to "core"
+- added cache API (currently only supported by RSBAC)
+- added generic get_event_properties to core API
+- fixed implementation of xp_notify for DummyOS
+- CLOSE events handled as read_only (fixes flush problem)
+- reorganized code to break up huge functions
+- removed sizeof(*var) in DazukoIO
+
+
+2.0.6
+- added support for Linux 2.6.12-rc1
+
+
+2.0.6-pre2
+- fixed a typo in the LSM API
+
+
+2.0.6-pre1
+- added support for Linux 2.6.11
+- fixed a typo in the LSM stacking code
+
+
+2.1.0-birthday (pre2)
+- merged all improvements from 2.0.5
+- configuration script reorganized and cleaned up
+- added configuration options for device major and system
+- changed dummy extension to DummyOS as sample Dazuko port
+- removed unneeded return values for mutex/lock functions in XP interface
+- removed "open file" list, file name lookups must occur in extension
+- filenames looked up from file descriptor for Linux 2.2/2.4, FreeBSD 4/5
+- ON_CLOSE_MODIFIED will now never be generated (this will be changed)
+- removed FiST support (this will be changed)
+- groups now have their own access mask and include/exclude paths
+- added access mask cache for quick access checks
+- removed pre/post concept from XP framework
+- C example programs no longer require user id to be 0
+- Ruby, Lua, and PHP examples added
+
+
+2.0.5
+- allow softlink events for Linux 2.6
+
+
+2.0.5-pre5
+- updated copyrights
+- added extern reference for __d_path()
+- removed static keyword in d_path patch
+
+
+2.0.5-pre4
+- reverted __d_path() back to Linux 2.6.0 version
+- added warnings and disable option for __d_path() under Linux 2.6
+- added README and patchfile for __d_path() under Linux 2.6
+- removed check for file readability under Linux 2.4
+
+
+2.0.5-pre3
+- fixed LSM helper script for SuSE support
+- added check to disable ON_CLOSE for Linux 2.6 kernels
+- "adopted" Linux 2.6 __d_path() function (and sync'd with 2.6.9)
+- added version information for FreeBSD 5 driver
+- updated Perl tests
+- added Perl multi-thread support (untested)
+
+
+2.0.5-pre2
+- added new helper script to identify Linux 2.6 LSM API
+- fixed compiler error for FreeBSD 5.3
+- removed unneeded function in DazukoXP interface (file_struct_check_cleanup)
+- added udev/sysfs support for Linux 2.6 (untested)
+
+
+2.0.5-pre1
+- added option to disable Linux 2.6 LSM stacking
+- added check to disable ON_EXEC for Linux 2.2/2.4 non-x86 kernels
+- added support for dup() and dup2() under Linux 2.2/2.4
+- added "link problem" solution to Linux 2.2/2.4
+- example programs now exclude /dev/ rather than only /dev/null
+- added support for Linux 2.6.10 kernel
+
+
+2.0.4
+- 2.0.4-pre5 unchanged
+
+
+2.0.4-pre5
+- fixed linux_conf for distributions without config.h
+- RSBAC files now correctly generated for use as-is
+- added Linux fallback for platform include
+- kmalloc's for Linux 2.6 now atomic
+
+
+2.0.4-pre4
+- removed devfs configuration option
+- added "linux_conf" for reliable Linux configuration detection
+- added configure checks for security, capabilities, and Fedora Core 2
+- merged all FreeBSD 4 features to FreeBSD 5
+- added LSM exceptions for Fedora Core 2
+
+
+2.0.4-pre3
+- solved "link problem" under FreeBSD 4 (introduced aliases)
+- added support for dup() and dup2() under FreeBSD 4 (adds more ON_OPEN/ON_CLOSE events)
+- fixed support for dazuko with capabilty under Linux SuSE 9.1
+- added recognition of ON_EXEC events under Linux 2.6
+- fixed devfs support with Linux 2.6 and RSBAC
+
+
+2.0.4-pre2
+- fixed "typo" in dazuko_linux26_lsm macro
+
+
+2.0.4-pre1
+- complete new support for LSM (FINALLY it works right!)
+- fixed compile errors under FreeBSD 5
+- added FreeBSD 5 pre-open support (improvement from 2.1.0-pre1)
+- updated copyright notices
+
+
+2.1.0-pre1
+- added new abstraction layer to userspace (dazukoio_xp)
+- ported pre-open event support for non-existant files to FreeBSD 5
+- added dummy extension for sample porting (runs in userspace)
+- cleaned up extra files and redundancies in package
+
+
+2.0.3
+- added pre-open events for non existant files under FreeBSD 4 (if parent directory exists)
+- corrected name lookup cleanup under FreeBSD 4
+- fixed a possible memory leak in DazukoIO
+
+
+2.0.3-pre4
+- added include to generated dazuko_ops_linux26.h
+- dazuko_call layer now inline static (to reduce needed stack space)
+- UID=0 no longer required (must be enforced with /dev/dazuko mode)
+- added Linux 2.2/2.4 support for DazukoFS based on FiST (still under development)
+
+
+2.0.3-pre3
+- configure script massively expanded (see ./configure --help)
+- Default Linux Capabilites now taken directly from original file
+- Perl and Python examples added
+- introduced "library" directory for DazukoIO static library
+- corrected minor check and return errors in XP layer
+
+
+2.0.3-pre2
+- fixed compile errors for some Linux 2.6 versions (using default capabilities)
+
+
+2.0.3-pre1
+- fixed ON_CLOSE_MODIFIED compile errors for Linux 2.2/2.4 and FreeBSD 4
+- added Default Linux Capabilities under Linux 2.6 (enabled with configure script)
+
+
+2.0.2
+- changed Linux 2.6 fops structure to Linux 2.6 style
+- fixed Linux 2.6 crash when unloading an "in use" Dazuko
+- fixed Linux 2.6 compile errors
+- fixed FreeBSD 5 compile warnings/errors
+- synced RSBAC extension with DAZuko module in RSBAC
+- fixed problem with escape characters >= 128
+
+
+2.0.2-pre2
+- added support for RSBAC (RSBAC version 1.2.3-pre5 or higher required)
+- fixed multiple daemons with Linux 2.2 (by forcing compat12 mode)
+- fixed missing filenames for compat12 mode
+
+
+2.0.2-pre1
+- introduced xp_daemon_id for daemon identification (instead of PID's)
+
+
+2.0.1
+- fixed support for Linux 2.2.x kernels (change in Makefile)
+
+
+2.0.1-pre3
+- fixed buffer size calculation for dazukoRegister()
+- added devfs support for Linux 2.6
+
+
+2.0.1-pre2
+- fixed "make test" for Linux 2.6
+- order of device and LSM registration switched for Linux 2.6
+- added custom snprintf/vsnprintf
+
+
+2.0.1-pre1
+- added full support for FreeBSD 5
+- fixed a problem with resolving local filenames in FreeBSD
+- configure script can build Makefiles for non-running Linux kernels
+- ON_OPEN now triggered when creating files (although this is not blockable)
+- removed __module__smp define for SMP Linux kernels
+- fixed "make clean" for Linux 2.2/2.4 Makefiles
+
+
+2.0.0
+- added "call_" layer to provide input/output checking to/from the XP layer
+- added verify functions to XP interface (needed by Linux 2.2 extension)
+- added destroy functions to XP interface (needed by Solaris)
+- extensions now use xp function calls instead of directly calling the functions
+- updated example_mt program to mirror example program
+- updated Example program for 2.0.0 interface and mirror example program
+- fixed endless device reading
+- fixed "exact match" for include/exclude paths
+- moved ioctl-handling code (aka compat12 code) into XP layer
+- chroot environments now work under Linux 2.6
+- all error values now using XP defines
+- compat12 (with ioctl) now supported under Linux 2.6
+- compat12 (with ioctl) no longer supported under FreeBSD
+- Java interface merged into main package
+- Java interface updated to 2.0.0 interface specifications
+- example programs now in sub-directories, example_c and example_java
+- example programs each have their own Makefile's (not yet configured with "configure")
+
+
+1.2.3
+- fixed "exact match" for include/exclude paths (fix from 2.0.0-current)
+
+
+1.2.3-pre1
+- updated configure script to match 2.0.0-pre5
+- updated example program to match 2.0.0-pre5
+- updated example_mt program to match 2.0.0-current
+- signals ignored for non-registered processes (improvement from 2.0.0-pre2)
+- fixed "off by one" bug for include/exclude paths (fix from 2.0.0-pre5)
+- renamed devfs define (improvement from 2.0.0-pre5)
+- fixed endless device reading (fix from 2.0.0-current)
+- removed warnings for unknown ioctl's
+
+
+2.0.0-pre5
+- added much more functionality to the configure script
+- fixed "in use" problems with spontaneous context-switches when unloading under FreeBSD
+- added macros for hooking/unhooking system calls
+- removed filename length restrictions
+- renamed the devfs define
+- abstracted code for generating protocol13
+- moved code for generating protocol13 into XP layer
+- fixed resolving userspace pointers
+- added support for filenames with non-printable characters
+- fixed compiler warnings when compiling the interface
+- added ability to compile interface library without 1.x compatibility
+- removed CHANGES file (it was very poorly maintained)
+- fixed "off by one" bug when calculating include/exclude path lengths
+- added support for Linux 2.6 kernels (not yet complete, but very functional)
+
+
+2.0.0-pre4
+- example program now takes include paths as arguments
+- example program excludes /dev/null
+- added a "set flag" for each item in dazuko_access
+- write() is now used instead of ioctl()
+- fixed memory leak in FreeBSD
+- fixed all 1.x compatibility issues
+
+
+2.0.0-pre3
+- added ON_UNLINK and ON_RMDIR events
+- improved new signal handling efficiency
+- FreeBSD state-logic now matches Linux
+- no longer transmitting unused values over device
+- added more information about files accessed
+
+
+2.0.0-pre2
+- signals ignored for non-registered processes
+- fixed syscall recursive entry problem
+- fixed 1.2.x compatibility problem
+- abstracted errors (for better platform compatibility)
+
+
+2.0.0-pre1
+- all changes of 1.2.2-pre2, 1.2.2-pre3, 1.2.2
+- renamed 1.3.x branch to 2.0.x (too many new things)
+- renamed structures and changed prototypes in API
+- FreeBSD extension fully functional
+- added new key/value device protocol (Protocol 13)
+- added read-only mode for registration
+- added backwards compatibility for 1.2.x branch
+- added configure script (works for Linux and FreeBSD)
+- moved device protocol handling into cross-platform (XP) layer
+
+
+1.2.2
+- added configure script
+- added UNREGISTER command to device protocol
+- example program now uses /home and /usr/home as include paths
+
+
+1.2.2-pre3
+- dazukoio has a complete multi-thread API (_TS for ThreadSafe) (see example_mt.c for usage)
+- access_t.deny shows current deny value to see if the access will already be blocked
+- message printed when unloading
+- added multi-threaded example program (example_mt)
+
+
+1.2.2-pre2
+- dazukoio now supports threads (although the functions are not thread-safe)
+
+
+1.2.2-pre1/1.3.0-pre1
+- example program catches SIGTERM and SIGINT, rather than "15" (patch #1675)
+- added return codes when add path fails (patch #1696)
+- added minor ON_CLOSE optimization
+
+
+1.3.0-pre1
+- added abstraction layer
+- added Linux extension (fully functional)
+- added FreeBSD extension (chroot, SMP, and local file access support not yet implemented)
+
+
+1.2.1
+- 1.2.1-pre2 unchanged
+
+
+1.2.1-pre2
+- correctly arranged the _SUPPORT defines
+- added defines so that only newer kernels utilize snprintf
+
+
+1.2.1-pre1
+- HIDDEN_SCT workaround now based on sys_close rather than sys_exit
+
+
+1.2.0
+- Dazuko interface now under a BSD License
+- fixed a memory leak by unregistration
+- fixed possible seg faults by unregistration
+- active count now atomic_t (rather than int)
+- ON_EXEC does not allow daemon to run exec unchecked
+- fixed a compiler warning
+- added Java interface (separate package)
+
+
+1.2.0-pre2
+- re-implemented cascading using arrays (rather than a linked list)
+- many functions now static and/or inline
+- ON_EXEC is turned on by default (runs very good now)
+- added a safety check in dazukoUnregister()
+
+
+1.2.0-birthday (pre1)
+- added cascading! allowing multiple applications to simultaneously utilize Dazuko
+- dazukoRegister() prototype has changed
+  (each application should use it's own registration string)
+- fixed a memory leak when using ON_EXEC
+
+
+1.1.2
+- 1.1.2-pre3 unchanged
+
+
+1.1.2-pre3
+- added code optimizations for file-hash lookups
+- ON_CLOSE_MODIFIED is back
+- ON_EXEC is back
+- events activated using a define (for example, -DON_EXEC_SUPPORT)
+- ON_CLOSE_MODIFIED,ON_EXEC events off by default
+- Makefile.sct now "uses" Makefile
+
+
+1.1.2-pre2
+- added code to support devfs (patch #761)
+
+
+1.1.2-pre1
+- added code to find the system call table if it is hidden
+
+
+1.1.1
+- sys_execve system call no longer supported (until the code is improved)
+
+
+1.1.0
+- switched dazukoio code to LGPL
+- eliminated ON_CLOSE_MODIFIED event
+
+
+1.0.3
+- added a check for invalid current task_struct on initialization
+- now using the short-form for file_operations struct
+
+
+1.0.2
+- minor changes to the C interface
+
+
+1.0.1
+- introduced a C interface for easy 3rd party implementations
+- added a check for daemon processes for all system calls
+- added ON_CLOSE_MODIFIED
+  (this was actually formerly falsely implemented as ON_CLOSE)
+- fixed a redundancy in checking the access mask
+
+
+1.0.0
+- the first free version of Dazuko
+

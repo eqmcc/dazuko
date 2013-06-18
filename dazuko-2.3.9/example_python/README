@@ -1,0 +1,68 @@
+Introduction
+============
+
+This is a Python extension to interface with Dazuko.  It provides
+a simple wrapper for the C library.  An example application
+demonstrating how to interface with Dazuko is provided as well.
+
+This Python extension is part of the Dazuko distribution and was
+released under the BSD license.  The original implementation was
+done by Gerhard Sittig.  Stefan Grundmann improved the style of the
+extension (provide an OO interface, use thread safe routines).
+
+Installing the module
+=====================
+
+You have to build the dazuko C library before you will be able to
+continue here.  If you haven't done so before, issue the following
+command:
+
+$ make -C ../library
+
+The installation of this module is done with the usual steps,
+while the below notes should be taken into consideration:
+
+$ python setup.py build
+# python setup.py install
+
+Or alternatively use the Makefile wrappers:
+
+$ make all
+# make install
+
+Note: Since one of the include paths is relative and python's
+distutils package might not handle this situation too well you
+might have to convert these relative path specs into absolute
+pathnames.  Use your favourite editor on the setup.py file or
+make use of the "make fixmk" target (although this target could
+easily have bugs -- use it with care!).  All this does not apply
+and is no problem when the dazuko library and its header file
+were installed in a system wide location.
+
+Testing the module
+==================
+
+Once the dazuko.so extension was installed (with the above
+"make install" or "python setup.py install" steps) you can try
+the simple example.py script.  Since dazuko only allows root
+processes to register this has to be done as the "root" user.
+You have to pass in the directory to watch.
+
+# python example.py `pwd`
+
+You should see output running over the screen when you start
+accessing files in the specified directory.  Stop the example
+program with CTRL-C.
+
+Developing applications
+=======================
+
+See 'pydoc dazuko' for details how to interface with Dazuko.
+
+
+Developer's Notes
+=================
+
+- better handle relative path specs for includes
+- fill in license, platform for "setup.py sdist", copyright for "setup.py bdist_rpm"
+- how and where to put the pydoc stuff?  "pydoc dazuko" is not too nice

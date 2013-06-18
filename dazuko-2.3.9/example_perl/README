@@ -1,0 +1,106 @@
+Introduction
+============
+
+This is a Perl extension to interface with Dazuko.  It provides a
+simple wrapper for the C library as well as an object oriented
+approach with a more Perl style interface.  Example applications
+demonstrating how to interface with Dazuko are provided as well.
+
+This Perl extension is part of the Dazuko distribution and was
+released under the BSD license.  The original implementation was
+done by Gerhard Sittig.
+
+Installing the module
+=====================
+
+You have to build the dazuko C library before you will be able to
+continue here.  If you haven't done so before, issue the following
+command:
+
+$ make -C ../library
+
+The Perl interface is a wrapper based on XS.  Installation is done
+with the usual steps, while the below notes should be taken into
+consideration:
+
+$ perl Makefile.PL
+$ make
+# make test
+# make install
+
+Note that Dazuko only allows applications to register which have
+root privileges.  Thus you need to run the "make test" command as
+root.  Since the "make install" command usually updates system wide
+locations not writable for regular users you have to run this command
+as root, too.
+
+A former version of the test sequence used to hardcode the include
+paths which the test script uses and expected the user to unblock the
+test by accessing some file under one of the directories, while a
+"$mayblock" flag was available to turn off this step of the test
+sequence (and fake success).  This test has been changed to schedule
+a file access to happen shortly after the test script goes into a
+blocking wait for an access event.  This should work on most systems,
+but still might fail on slower machines.  You may want to tweak the
+timing parameter found in the t/autounblock.inc file.
+
+Testing the module
+==================
+
+Once the Dazuko/IO.pm, IO.so files are in place (this is done with
+the above "make install" command) you can try the simple (C like)
+Example script.  Again, this has to be done as root since the program
+wants to register with Dazuko.
+
+# perl Example.pl `pwd`
+
+You should see output running over the screen when you start accessing
+files in the directory you passed to the example script.  Stop the
+example program with CTRL-C.
+
+When the Dazuko/Obj.pm and Dazuko/Access.pm files are in place (this
+is done with the above "make install" command) you can try the object
+oriented ExampleOO script.  Again you should see output when you start
+accessing files.  And this script is stopped with CTRL-C, too.
+
+# perl ExampleOO.pl `pwd`
+
+Advanced test scenario
+======================
+
+See "perldoc Example*.pl" for details on what else the example scripts
+are able to do.
+
+You may want to try the "--deny" option.  When you do so, please
+understand that this will deny *any* access to files and directories
+in und below the directories you passed to the script.  Make sure
+you do this only on directories not vital to your system's health!
+
+# mkdir /tmp/dazukotest
+# echo stuff > /tmp/dazukotest/stuff-file
+# perl ExampleOO.pl --deny /tmp/dazukotest
+(from a second prompt)
+# touch /tmp/dazukotest/afile
+# echo something > /tmp/dazukotest/afile
+# head /tmp/dazukotest/stuff-file
+(in the terminal with the example script)
+CTRL-C
+# touch /tmp/dazukotest/afile
+# echo something > /tmp/dazukotest/afile
+# head /tmp/dazukotest/stuff-file
+# rm -r /tmp/dazukotest
+
+The ExampleThr.pl script was based on the ExampleOO.pl script and got
+changed to support threads.  The Dazuko::Obj module itself does use the
+thread safe API of Dazuko.  But the sample script has not been tested
+(except for clean syntax) since I do not have access to a Perl
+installation with thread support.  Should you want to run this script
+feel free to do so -- but you have been warned.  Please be so kind to
+provide feedback on success or failure.  Thank you!
+
+Writing applications
+====================
+
+Now everything should be well and you can start writing your own
+Dazuko enabled Perl applications.  See the Dazuko::IO(3) and the
+Dazuko::Obj(3) manpages for details.

@@ -1,0 +1,755 @@
+#!/bin/sh
+#set -x
+
+#  Dazuko linux_lsm_conf. Configure Dazuko for Linux 2.6 LSM API.
+#  Written by John Ogness <dazukocode@ogness.net>
+#
+#  Copyright (c) 2004, 2005, 2006 H+BEDV Datentechnik GmbH
+#  Copyright (c) 2006, 2007 Avira GmbH
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions
+#  are met:
+#
+#  1. Redistributions of source code must retain the above copyright notice,
+#  this list of conditions and the following disclaimer.
+#
+#  2. Redistributions in binary form must reproduce the above copyright notice,
+#  this list of conditions and the following disclaimer in the documentation
+#  and/or other materials provided with the distribution.
+#
+#  3. Neither the name of Dazuko nor the names of its contributors may be used
+#  to endorse or promote products derived from this software without specific
+#  prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+
+
+usage_exit()
+{
+	echo "usage: $0 <security.h>"
+	exit 1
+}
+
+if [ $# -ne 1 ]
+then
+	usage_exit
+fi
+
+if [ ! -f "$1" ]
+then
+	usage_exit
+fi
+
+FILE="dazuko_linux26_lsm_def.h"
+TMPFILE="$FILE.tmp"
+Z="[^),]*"
+
+cat $1 | tr -d "\n" > $TMPFILE
+
+echo "/* defines for LSM API identification */" > $FILE
+echo "" >> $FILE
+
+cat $TMPFILE | grep -q \
+"security_sysctl${Z}(${Z}struct${Z}ctl_table${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sysctl_2_6_10" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_settime${Z}(${Z}struct${Z}timespec${Z}\*${Z},${Z}struct${Z}timezone${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_settime_2_6_10" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_bprm_apply_creds${Z}(${Z}struct${Z}linux_binprm${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_bprm_apply_creds_2_6_6" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_bprm_apply_creds${Z}(${Z}struct${Z}linux_binprm${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_bprm_apply_creds_2_6_6_mandrake" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sb_copy_data${Z}(${Z}struct${Z}file_system_type${Z}\*${Z},${Z}void${Z}\*${Z},${Z}void${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sb_copy_data_2_6_5" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sb_copy_data${Z}(${Z}const${Z}char${Z}\*${Z},${Z}void${Z}\*${Z},${Z}void${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sb_copy_data_2_6_3" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sb_kern_mount${Z}(${Z}struct${Z}super_block${Z}\*${Z},${Z}void${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sb_kern_mount_2_6_3" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"cap_inode_setxattr${Z}(${Z},${Z},${Z},${Z},${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_setxattr_2_6_2" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"cap_inode_removexattr${Z}(${Z},${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_removexattr_2_6_2" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_xattr_getsuffix${Z}(${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_xattr_getsuffix_2_6_17" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_getsecurity${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}const${Z}char${Z}\*${Z},${Z}void${Z}\*${Z},${Z}size_t${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_getsecurity_2_6_10" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_getsecurity${Z}(${Z}const${Z}struct${Z}inode${Z}\*${Z},${Z}const${Z}char${Z}\*${Z},${Z}void${Z}\*${Z},${Z}size_t${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+       	echo "#define LSM_security_inode_getsecurity_2_6_17" >> $FILE
+else
+	# we only check this if the above search didn't match
+
+	cat $TMPFILE | grep -q \
+	"security_inode_getsecurity${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}const${Z}char${Z}\*${Z},${Z}void${Z}\*${Z},${Z}size_t${Z},${Z}int${Z})"
+	if [ $? -eq 0 ]
+	then
+       		echo "#define LSM_security_inode_getsecurity_2_6_14" >> $FILE
+	fi
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_setsecurity${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}const${Z}char${Z}\*${Z},${Z}const${Z}void${Z}\*${Z},${Z}size_t${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_setsecurity_2_6_10" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_listsecurity${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}char${Z}\*${Z},${Z}size_t${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_listsecurity_2_6_10" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_file_send_sigiotask${Z}(${Z}struct${Z}task_struct${Z}\*${Z},${Z}struct${Z}fown_struct${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_file_send_sigiotask_2_6_10" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_task_setgroups${Z}(${Z}struct${Z}group_info${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_task_setgroups_2_6_4" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_ipc_getsecurity${Z}(${Z}struct${Z}kern_ipc_perm${Z}\*${Z},${Z}void${Z}\*${Z},${Z}size_t${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_ipc_getsecurity_2_6_17" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_shm_shmat${Z}(${Z}struct${Z}shmid_kernel${Z}\*${Z},${Z}char${Z}__user${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_shm_shmat_2_6_7" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_netlink_send${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}struct${Z}sk_buff${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_netlink_send_2_6_8" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_socket_create${Z}(${Z}int${Z},${Z}int${Z},${Z}int${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_socket_create_2_6_6" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"int[^a-z]*security_socket_post_create${Z}(${Z}struct${Z}socket${Z}\*${Z},${Z}int${Z},${Z}int${Z},${Z}int${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_socket_post_create_2_6_19" >> $FILE
+else
+	# we only check this if the above search didn't match
+
+	cat $TMPFILE | grep -q \
+	"security_socket_post_create${Z}(${Z}struct${Z}socket${Z}\*${Z},${Z}int${Z},${Z}int${Z},${Z}int${Z},${Z}int${Z})"
+	if [ $? -eq 0 ]
+	then
+		echo "#define LSM_security_socket_post_create_2_6_6" >> $FILE
+	fi
+fi
+
+cat $TMPFILE | grep -q \
+"security_socket_getpeersec_stream${Z}(${Z}struct${Z}socket${Z}\*${Z},${Z}char${Z}__user${Z}\*${Z},${Z}int${Z}__user${Z}\*${Z},${Z}unsigned${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_socket_getpeersec_stream_2_6_17" >> $FILE
+else
+	# we only check this if the above search didn't match
+
+	cat $TMPFILE | grep -q \
+	"security_socket_getpeersec${Z}(${Z}struct${Z}socket${Z}\*${Z},${Z}char${Z}__user${Z}\*${Z},${Z}int${Z}__user${Z}\*${Z},${Z}unsigned${Z})"
+	if [ $? -eq 0 ]
+	then
+		echo "#define LSM_security_socket_getpeersec_2_6_2" >> $FILE
+	fi
+fi
+
+cat $TMPFILE | grep -q \
+"security_socket_getpeersec_dgram${Z}(${Z}struct${Z}sk_buff${Z}\*${Z},${Z}char${Z}\*${Z}\*${Z},${Z}u32${Z}\*${Z}${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_socket_getpeersec_dgram_2_6_17" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_quota_on${Z}(${Z}struct${Z}dentry${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_quota_on_2_6_11" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_bprm_post_apply_creds${Z}(${Z}struct${Z}linux_binprm${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_bprm_post_apply_creds_2_6_11" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_file_mmap${Z}(${Z}struct${Z}file${Z}\*${Z},${Z}unsigned${Z}long${Z},${Z}unsigned${Z}long${Z},${Z}unsigned${Z}long${Z},${Z}unsigned${Z}long${Z},${Z}unsigned${Z}long${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_file_mmap_2_6_23" >> $FILE
+else
+	# we only check this if the above search didn't match
+
+	cat $TMPFILE | grep -q \
+	"security_file_mmap${Z}(${Z}struct${Z}file${Z}\*${Z},${Z}unsigned${Z}long${Z},${Z}unsigned${Z}long${Z},${Z}unsigned${Z}long${Z})"
+	if [ $? -eq 0 ]
+	then
+		echo "#define LSM_security_file_mmap_2_6_12" >> $FILE
+	fi
+fi
+
+cat $TMPFILE | grep -q \
+"security_file_mprotect${Z}(${Z}struct${Z}vm_area_struct${Z}\*${Z},${Z}unsigned${Z}long${Z},${Z}unsigned${Z}long${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_file_mprotect_2_6_12" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_init_security${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}inode${Z}\*${Z},${Z}char${Z}\*${Z}\*${Z},${Z}void${Z}\*${Z}\*${Z},${Z}size_t${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_init_security_2_6_14" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_post_create${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_post_create_2_6_14" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_post_link${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_post_link_2_6_14" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_post_symlink${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}const${Z}char${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_post_symlink_2_6_14" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_post_mkdir${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_post_mkdir_2_6_14" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_post_mknod${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}int${Z},${Z}dev_t${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_post_mknod_2_6_14" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_post_rename${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_post_rename_2_6_14" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sk_alloc${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}int${Z},${Z}unsigned${Z}int${Z}__nocast${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sk_alloc_security_2_6_14" >> $FILE
+else
+	# we only check this if the above search didn't match
+
+	cat $TMPFILE | grep -q \
+	"security_sk_alloc${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}int${Z},${Z}int${Z})"
+	if [ $? -eq 0 ]
+	then
+		echo "#define LSM_security_sk_alloc_security_2_6_2" >> $FILE
+	fi
+fi
+
+cat $TMPFILE | grep -q \
+"security_sk_alloc${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}int${Z},${Z}gfp_t${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sk_alloc_security_2_6_15" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sk_free${Z}(${Z}struct${Z}sock${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sk_free_security_2_6_2" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"sk_sid${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}struct${Z}flowi${Z}\*${Z},${Z}u8${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sk_getsid_2_6_17" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_key_alloc${Z}(${Z}struct${Z}key${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_struct_key_alloc_2_6_15" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_key_free${Z}(${Z}struct${Z}key${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_struct_key_free_2_6_15" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_key_permission${Z}(${Z}key_ref_t${Z},${Z}struct${Z}task_struct${Z}\*${Z},${Z}key_perm_t${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_key_permission_2_6_15" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_policy_alloc${Z}(${Z}struct${Z}xfrm_policy${Z}\*${Z},${Z}struct${Z}xfrm_user_sec_ctx${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_policy_alloc_2_6_16" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_policy_clone${Z}(${Z}struct${Z}xfrm_policy${Z}\*${Z},${Z}struct${Z}xfrm_policy${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_policy_clone_2_6_16" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_policy_free${Z}(${Z}struct${Z}xfrm_policy${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_policy_free_2_6_16" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_state_alloc${Z}(${Z}struct${Z}xfrm_state${Z}\*${Z},${Z}struct${Z}xfrm_user_sec_ctx${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_state_alloc_2_6_16" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_state_free${Z}(${Z}struct${Z}xfrm_state${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_state_free_2_6_16" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_policy_lookup${Z}(${Z}struct${Z}xfrm_policy${Z}\*${Z},${Z}u32${Z}fl_secid${Z},${Z}u8${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_policy_lookup_2_6_19" >> $FILE
+else
+	# we only check this if the above search didn't match
+
+	cat $TMPFILE | grep -q \
+	"security_xfrm_policy_lookup${Z}(${Z}struct${Z}xfrm_policy${Z}\*${Z},${Z}u32${Z},${Z}u8${Z})"
+	if [ $? -eq 0 ]
+	then
+		echo "#define LSM_security_xfrm_policy_lookup_2_6_16" >> $FILE
+	fi
+fi
+
+cat $TMPFILE | grep -q \
+"cap_netlink_recv${Z}(${Z}struct${Z}sk_buff${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_netlink_recv_2_6_18" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sb_statfs${Z}(${Z}struct${Z}dentry${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sb_statfs_2_6_18" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_task_kill${Z}(${Z}struct${Z}task_struct${Z}\*${Z},${Z}struct${Z}siginfo${Z}\*${Z},${Z}int${Z},${Z}u32${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_task_kill_2_6_18" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_task_getsecid${Z}(${Z}struct${Z}task_struct${Z}\*${Z},${Z}u32${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_task_getsecid_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_task_setioprio${Z}(${Z}struct${Z}task_struct${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_task_setioprio_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_task_getioprio${Z}(${Z}struct${Z}task_struct${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_task_getioprio_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_task_movememory${Z}(${Z}struct${Z}task_struct${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_task_movememory_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"(\*secid_to_secctx)${Z}(${Z}u32${Z},${Z}char${Z}\*\*${Z},${Z}u32${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_secid_to_secctx_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"(\*release_secctx)${Z}(${Z}char${Z}\*${Z},${Z}u32${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_release_secctx_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_socket_getpeersec_dgram${Z}(${Z}struct${Z}socket${Z}\*${Z},${Z}struct${Z}sk_buff${Z}\*${Z},${Z}u32${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_socket_getpeersec_dgram_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sk_clone${Z}(${Z}const${Z}struct${Z}sock${Z}\*${Z},${Z}struct${Z}sock${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sk_clone_security_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"void[^a-z_]*sk_getsecid[^a-z_]*(${Z}struct${Z}sock${Z}\*${Z},${Z}u32${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sk_getsecid_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_sock_graft${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}struct${Z}socket${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_sock_graft_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inet_conn_request${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}struct${Z}sk_buff${Z}\*${Z},${Z}struct${Z}request_sock${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inet_conn_request_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inet_csk_clone${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}const${Z}struct${Z}request_sock${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inet_csk_clone_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_req_classify_flow${Z}(${Z}const${Z}struct${Z}request_sock${Z}\*${Z},${Z}struct${Z}flowi${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_req_classify_flow_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_key_alloc${Z}(${Z}struct${Z}key${Z}\*${Z},${Z}struct${Z}task_struct${Z}\*${Z},${Z}unsigned${Z}long${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_struct_key_alloc_2_6_19" >> $FILE
+fi
+
+# taken from security_operations struct
+cat $TMPFILE | grep -q \
+"xfrm_policy_alloc_security${Z})${Z}(${Z}struct${Z}xfrm_policy${Z}\*${Z},${Z}struct${Z}xfrm_user_sec_ctx${Z}\*${Z},${Z}struct${Z}sock${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_policy_alloc_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_policy_delete${Z}(${Z}struct${Z}xfrm_policy${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_policy_delete_2_6_19" >> $FILE
+fi
+
+# taken from security_operations struct
+cat $TMPFILE | grep -q \
+"xfrm_state_alloc_security${Z})${Z}(${Z}struct${Z}xfrm_state${Z}\*${Z},${Z}struct${Z}xfrm_user_sec_ctx${Z}\*${Z},${Z}struct${Z}xfrm_sec_ctx${Z}\*${Z},${Z}u32${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_state_alloc_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_state_delete${Z}(${Z}struct${Z}xfrm_state${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_state_delete_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_state_pol_flow_match${Z}(${Z}struct${Z}xfrm_state${Z}\*${Z},${Z}struct${Z}xfrm_policy${Z}\*${Z},${Z}struct${Z}flowi${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_state_pol_flow_match_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_flow_state_match${Z}(${Z}struct${Z}flowi${Z}\*${Z},${Z}struct${Z}xfrm_state${Z}\*${Z},${Z}struct${Z}xfrm_policy${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_flow_state_match_2_6_19" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_xfrm_decode_session${Z}(${Z}struct${Z}sk_buff${Z}\*${Z},${Z}u32${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_decode_session_2_6_19" >> $FILE
+fi
+
+# taken from security_operations struct
+cat $TMPFILE | grep -q \
+"xfrm_state_alloc_security${Z})${Z}(${Z}struct${Z}xfrm_state${Z}\*${Z},${Z}struct${Z}xfrm_user_sec_ctx${Z}\*${Z},${Z}u32${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_xfrm_state_alloc_2_6_20" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inet_conn_established${Z}(${Z}struct${Z}sock${Z}\*${Z},${Z}struct${Z}sk_buff${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_unix_stream_connect_2_6_20" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_getprocattr${Z}(${Z}struct${Z}task_struct${Z}\*${Z},${Z}char${Z}\*${Z},${Z}char${Z}\*\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_getprocattr_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_vm_enough_memory${Z}(${Z}struct${Z}mm_struct${Z}\*${Z},${Z}long${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_vm_enough_memory_2_6_23" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_create${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_create_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_link${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_link_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_unlink${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_unlink_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_symlink${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}const${Z}char${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_symlink_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_mkdir${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_mkdir_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_rmdir${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_rmdir_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_mknod${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}int${Z},${Z}dev_t${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_mknod_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_rename${Z}(${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}struct${Z}inode${Z}\*${Z},${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_rename_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_readlink${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_readlink_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_setattr${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}struct${Z}iattr${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_setattr_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_setxattr${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}char${Z}\*${Z},${Z}void${Z}\*${Z},${Z}size_t${Z},${Z}int${Z},${Z}struct${Z}file${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_setxattr_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_post_setxattr${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}char${Z}\*${Z},${Z}void${Z}\*${Z},${Z}size_t${Z},${Z}int${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_post_setxattr_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_getxattr${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}char${Z}\*${Z},${Z}struct${Z}file${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_getxattr_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_listxattr${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}struct${Z}file${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_listxattr_2_6_21" >> $FILE
+fi
+
+cat $TMPFILE | grep -q \
+"security_inode_removexattr${Z}(${Z}struct${Z}dentry${Z}\*${Z},${Z}struct${Z}vfsmount${Z}\*${Z},${Z}char${Z}\*${Z},${Z}struct${Z}file${Z}\*${Z})"
+if [ $? -eq 0 ]
+then
+	echo "#define LSM_security_inode_removexattr_2_6_21" >> $FILE
+fi
+
+
+rm -f $TMPFILE
+
+exit 0
+

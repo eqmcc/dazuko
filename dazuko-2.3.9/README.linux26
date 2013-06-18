@@ -1,0 +1,66 @@
+==============================
+ README for Linux 2.6 kernels
+==============================
+
+
+NOTE: This information is only valid if you are using Dazuko with syscall
+      hooking. i.e. you are configuring Dazuko with --enable-syscalls.
+      If you are using Dazuko with RedirFS (recommended), then
+      you will not have any of the problems listed here.
+
+
+In order to lookup full file paths (even in chroot environments), Dazuko
+uses the kernel function __d_path(). Unfortunately this function is no
+longer exported to kernel modules in the Linux 2.6 kernel.
+
+Dazuko has its own copy of this function but unfortunately it is only safe
+for UP (uni-processor or non-SMP) kernels. This is because the real __d_path()
+function uses a kernel lock, which is not available to kernel modules.
+
+If your kernel is not configured as SMP, then it is safe to use Dazuko's
+copy of the __d_path() function. This is default.
+
+If your kernel is SMP then you should _not_ use Dazuko's copy of __d_path().
+You can disable Dazuko's local copy of __d_path() by configuring Dazuko with:
+
+$ ./configure --disable-local-dpath
+
+Since Dazuko requires __d_path(), your kernel will have to export it if you
+disable the local copy. Some GNU/Linux distributions have a modified kernel
+that does export this function. The "vanilla" Linux kernel does _not_ export
+this function. You can check if your kernel exports this function with:
+
+$ grep __d_path /proc/kallsyms
+
+The results can be interpreted as:
+
+xxxxx T __d_path <= exported
+xxxxx t __d_path <= not exported
+
+If you are running an SMP kernel and __d_path() is not exported, then you
+will have to modify your kernel source code to export the symbol and
+rebuild your kernel. The modification is very simply and can be made by
+using the included patch to modify the fs/dcache.c file. Here is an example:
+
+$ patch /lib/modules/`uname -r`/build/fs/dcache.c patch_dpath.diff
+
+The location of your Linux kernel source code may be different.
+
+Once you have patched the fs/dcache.c file, you can rebuild and install your
+kernel and kernel modules.
+
+If your GNU/Linux distribution doesn't export the __d_path() function, you
+may want to write them email suggesting that this function be exported in
+the next release.
+
+Note: As a workaround, Dazuko now offers the configuration option
+      --disable-chroot-support. This will disable Dazuko from trying to
+      resolve chroot'd filenames, thus making Dazuko safe for SMP kernels
+      that do not export __d_path(). However, if this option is used,
+      registered applications will only be able to work with chroot'd
+      filenames if they resolve the filenames from within userland. If
+      the application you plan to use with Dazuko requires handling
+      chroot'd filenames (and you have an SMP kernel that cannot export
+      __d_path()), then you should contact the application developer to
+      make sure it supports this option.
+
